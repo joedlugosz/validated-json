@@ -1,0 +1,25 @@
+
+{
+  "name": "Test Project",
+  "version": "1.0.0",
+  "description": "A sample project to demonstrate JSON structure",
+  "author": "John Doe",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.17.1",
+    "mongoose": "^5.10.9"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "node",
+    "express",
+    "mongoose",
+    "sample"
+  ],
+  "repository": {
+    "type": "git"
+  }
+}
