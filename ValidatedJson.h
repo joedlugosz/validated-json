@@ -85,25 +85,32 @@ public:
   Json::Value GetRoot() const { return _root; }
 
   template<typename T>
-  T Required(const std::string& key) const
+  void Required(const std::string& key, T& value) const
   {
     if (!_root.isMember(key))
     {
         throw std::runtime_error("Required key \"" + key + "\" not found");
     }
 
-    return ParseValue<T>(key);
+    value = ParseValue<T>(key);
   }
 
   template<typename T>
-  T Optional(const std::string& key, T defaultValue) const
+  void Optional(const std::string& key, T& value, const T& defaultValue) const
   {
     if (!_root.isMember(key))
     {
-      return defaultValue;
+      value = defaultValue;
     }
+    else
+    {
+      value = ParseValue<T>(key);
+    }
+  }
 
-    return ParseValue<T>(key);
+  // Special case for default value supplied to strings
+  void Optional(const std::string& key, std::string& value, const char* defaultValue) const {
+    Optional(key, value, std::string(defaultValue));
   }
 
   template<typename T>
