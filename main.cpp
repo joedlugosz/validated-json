@@ -40,7 +40,8 @@ int main(int argc, char* argv[])
   // }
 
   try {
-    auto data{MyData{JsonString("{\"description\": \"a test\", \"nested\": {\"age\": 30}}")}};
+    auto data{MyData{JsonString("{\"description\": \"a test\", \"nested\": {\"age\": 30}"
+      ", \"values\": [1, 2, 3]}")}};
     std::cout << data.ToString() << std::endl;
     std::cout << "JSON string loaded successfully." << std::endl;
   } catch (const std::exception& e) { 

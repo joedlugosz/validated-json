@@ -34,19 +34,28 @@ public:
     Optional("name", _name, "No name provided");
     Required("description", _description);
     Required("nested", _nestedData);
+    Required("values", _values);
   }
 
   std::string ToString() const
   {
     std::stringstream ss;
-    ss << "MyData: name = " << _name << ", description = "
-       << _description << ", nested = " << _nestedData.ToString() << std::endl;
+    ss << "MyData: name = " << _name
+       << ", description = " << _description
+       << ", nested = " << _nestedData.ToString()
+       << ", values = [";
+    for (const auto& value : _values) {
+      ss << value << " ";
+    }
+    ss << "]"
+       << std::endl;
     return ss.str();
   }
 
 private:
   std::string _name;
   std::string _description;
+  std::vector<int> _values;
   MyData2 _nestedData;
 };
 

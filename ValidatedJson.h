@@ -10,6 +10,17 @@
 #include <type_traits>
 
 /**
+ * @brief Type trait to check if a type is a std::vector<T>.
+ */
+template<typename T>
+struct is_vector : std::false_type {};
+/**
+ * @brief Type trait to check if a type is a std::vector<T>.
+ */
+template<typename T, typename Alloc>
+struct is_vector<std::vector<T, Alloc>> : std::true_type {};
+
+/**
  *  @brief Class to parse JSON data which is provided to a ValidatedJson class.
  *  @see   ValidatedJson, JsonFile, JsonString
  */
@@ -120,7 +131,7 @@ protected:
         throw std::runtime_error("Required key \"" + key + "\" not found");
     }
 
-    value = ParseValue<T>(key);
+    value = ParseValue<T>(key, _root[key]);
   }
 
   /**
@@ -139,7 +150,7 @@ protected:
     }
     else
     {
-      value = ParseValue<T>(key);
+      value = ParseValue<T>(key, _root[key]);
     }
   }
 
@@ -161,20 +172,50 @@ private:
    * @return Parsed value of type T.
    */
   template<typename T>
-  T ParseValue(const std::string& key) const
+  T ParseValue(const std::string &key, const Json::Value& value) const
   {
+    // Add types here as necessary
     if constexpr (std::is_same_v<T, std::string>) {
-      return _root[key].asString();
+      if (!value.isString()) {
+        throw std::runtime_error("Expected string value for key: " + key);
+      }
+      return value.asString();
     } else if constexpr (std::is_same_v<T, int>) {
-      return _root[key].asInt();
+      if (!value.isInt()) {
+        throw std::runtime_error("Expected integer value for key: " + key);
+      }
+      if (value.asInt() < Json::Value::minInt || value.asInt() > Json::Value::maxInt) {
+        throw std::runtime_error("Integer value out of range for key: " + key);
+      }
+      return value.asInt();
     } else if constexpr (std::is_same_v<T, double>) {
-      return _root[key].asDouble();
+      if (!value.isDouble()) {
+        throw std::runtime_error("Expected double value for key: " + key);
+      }
+      return value.asDouble();
     } else if constexpr (std::is_same_v<T, bool>) {
-      return _root[key].asBool();
+      if (!value.isBool()) {
+        throw std::runtime_error("Expected boolean value for key: " + key);
+      }
+      return value.asBool();
     } else if constexpr (std::is_base_of_v<ValidatedJson, T>) {
-      // Pass the nested JSON object into the constructor of the derived class
-      return T(JsonData(_root[key]));
-     } else {
+      // Deal with nested json objects
+      if (!value.isObject()) {
+        throw std::runtime_error("Expected JSON object for key: " + key);
+      }
+      return T(JsonData(value));
+    } else if constexpr (is_vector<T>::value) {
+      std::cout << "vector" << std::endl;
+      // Deal with JSON arrays
+      if (!value.isArray()) {
+        throw std::runtime_error("Expected array for key: " + key);
+      }
+      T result;
+      for (const auto& element : value) {
+        result.emplace_back(ParseValue<typename T::value_type>(key, element));
+      }
+      return result;
+    } else {
       static_assert(false && sizeof(T), "Unsupported type for ParseValue()");
     }
   }
