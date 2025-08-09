@@ -9,29 +9,31 @@
 #include <iostream>
 #include <type_traits>
 
-class JsonData
+/**
+ *  @brief Class to parse JSON data which is provided to a ValidatedJson class.
+ *  @see   ValidatedJson, JsonFile, JsonString
+ */
+ class JsonData
 {
 public:
-  explicit JsonData(std::istream&& stream)
-  {
-    if (!stream.good())
-    {
-      throw std::runtime_error("Invalid input stream for JSON data.");
-    }
+  /**
+   * @brief Constructor that reads JSON data from an input stream.
+   * @param stream Input stream containing JSON data.
+   * @throws std::runtime_error if the stream is invalid or if parsing fails.
+   */
+  explicit JsonData(std::istream&& stream);
 
-    Json::parseFromStream(Json::CharReaderBuilder(), stream, &_root, &_errors);
+  /**
+   * @brief Constructor that takes existing parsed JSON data.
+   * @param root JSON root value.
+   */
+  explicit JsonData(const Json::Value root);
 
-    if (!_errors.empty())
-    {
-      throw std::runtime_error("JSON parsing error: " + _errors);
-    }
-  }
-
-  explicit JsonData(const Json::Value root) :
-    _root(root)
-  {}
-
-  Json::Value GetRoot() const { return _root; }
+  /**
+   * @brief Get the Root value of the parsed JSON data.
+   * @return Json::Value 
+   */
+  inline Json::Value GetRoot() const { return _root; }
 
 protected:
   Json::Value _root;
@@ -40,40 +42,61 @@ private:
   std::string _errors;
 };
 
+/**
+ * @brief Class to parse JSON data from a file.
+ * @see   JsonData
+ */
 class JsonFile : public JsonData
 {
 public:
-  explicit JsonFile(const std::string& path) :
-    JsonData(Open(path))
-  {}
+  /**
+   * @brief Constructor that reads JSON data from a file.
+   * @param path Path to the JSON file.
+   * @throws std::runtime_error if the file cannot be opened.
+   */
+  explicit JsonFile(const std::string& path);
 
 private:
-  static std::ifstream Open(const std::string& path)
-  {
-    std::ifstream ifs;
-    ifs.open(path);
-    if (!ifs.is_open())
-    {
-      throw std::runtime_error("Could not open JSON file: " + path);
-    }
-    return ifs;
-  }
+  /**
+   * @brief Helper function to open the file and throw an error if it cannot be opened.
+   * @param path Path to the JSON file.
+   * @return std::ifstream 
+   */
+  static std::ifstream Open(const std::string& path);
 };
 
+// Class to parse JSON data from a string.
 class JsonString : public JsonData
 {
 public:
-  explicit JsonString(const std::string& string) :
-    JsonData(std::stringstream(string))
-  {}
+  /**
+   * @brief Constructor that reads JSON data from a string.
+   * @param path The JSON string.
+   */
+  explicit JsonString(const std::string& string);
 };
 
+/**
+ * @brief Class to perform validation on parsed JSON data.
+ *        Derive from this class to implement specific validation logic.
+ * @see   JsonData
+ */
 class ValidatedJson
 {
 public:
-  explicit ValidatedJson(const JsonData& data) :
-    _root(data.GetRoot())
-  {}
+  /**
+   * @brief Get the Root object
+   * @return Json::Value 
+   */
+  inline Json::Value GetRoot() const { return _root; }
+
+protected:
+  /**
+   * @brief Construct a new Validated Json object from JsonData.
+   *        Called from derived classes.
+   * @param data JsonData object containing the parsed JSON data.
+   */
+  explicit ValidatedJson(const JsonData& data);
 
   ValidatedJson() = delete;
   ValidatedJson(const ValidatedJson&) = default;
@@ -82,8 +105,13 @@ public:
   ValidatedJson& operator=(ValidatedJson&&) = default;
   ~ValidatedJson() = default;
 
-  Json::Value GetRoot() const { return _root; }
-
+  /**
+   * @brief Retrieve a required key from the JSON data.
+   * @param key Key name to retrieve.
+   * @param value Reference to store the retrieved value.
+   * @throws std::runtime_error if the key is not found in the JSON data.
+   * @return None 
+   */
   template<typename T>
   void Required(const std::string& key, T& value) const
   {
@@ -95,6 +123,13 @@ public:
     value = ParseValue<T>(key);
   }
 
+  /**
+   * @brief Retrieve an optional key from the JSON data.
+   * @param key Key name to retrieve.
+   * @param value Reference to store the retrieved value.
+   * @param defaultValue Default value to use if the key is not found.
+   * @return None 
+   */
   template<typename T>
   void Optional(const std::string& key, T& value, const T& defaultValue) const
   {
@@ -108,11 +143,23 @@ public:
     }
   }
 
-  // Special case for default value supplied to strings
-  void Optional(const std::string& key, std::string& value, const char* defaultValue) const {
-    Optional(key, value, std::string(defaultValue));
-  }
+  /**
+   * @brief Retrieve an optional key from the JSON data.
+   *        This is a special case for strings where a default value is
+   *        provided as a C-style string.
+   * @param key Key name to retrieve.
+   * @param value Reference to store the retrieved value.
+   * @param defaultValue Default value to use if the key is not found.
+   * @return None 
+   */
+  void Optional(const std::string& key, std::string& value, const char* defaultValue) const;
 
+private:
+  /**
+   * @brief Parse the value of a key from the JSON data.
+   * @param key Key name to parse.
+   * @return Parsed value of type T.
+   */
   template<typename T>
   T ParseValue(const std::string& key) const
   {

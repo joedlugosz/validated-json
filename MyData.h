@@ -19,7 +19,7 @@ public:
     ss << "MyData: name = " << _name << ", description = " << _description << std::endl;
     return ss.str();
   }
-
+  
 private:
   std::string _name;
   std::string _description;

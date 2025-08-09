@@ -11,7 +11,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(JSONCPP REQUIRED jsoncpp)
 
 # Add your executable
-add_executable(MyJsonApp main.cpp)
+add_executable(MyJsonApp main.cpp ValidatedJson.cpp)
 
 # Include directories and link flags from pkg-config
 target_include_directories(MyJsonApp PRIVATE ${JSONCPP_INCLUDE_DIRS})
