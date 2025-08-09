@@ -219,8 +219,8 @@ protected:
   template<typename T>
   inline void WithinRange(const std::string& key, const T& value, const T& min, const T& max) const
   {
-    Min(key, value, min);
-    Max(key, value, max);
+    AboveMin(key, value, min);
+    BelowMax(key, value, max);
   }
 
   /**
@@ -230,7 +230,7 @@ protected:
    * @param value The value to validate
    * @param permitted The permitted values
    */
-  template<typename T, std::size_t N>
+  template<typename T>
   inline void MemberOf(const std::string& key, const T& value, const std::initializer_list<T> permitted) const
   {
     for (const auto& p : permitted) {
