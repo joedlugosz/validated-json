@@ -8,6 +8,7 @@
 #include <json/json.h>
 #include <iostream>
 #include <type_traits>
+#include <vector>
 
 /**
  * @brief Type trait to check if a type is a std::vector<T>.
@@ -24,7 +25,7 @@ struct is_vector<std::vector<T, Alloc>> : std::true_type {};
  *  @brief Class to parse JSON data which is provided to a ValidatedJson class.
  *  @see   ValidatedJson, JsonFile, JsonString
  */
- class JsonData
+class JsonData
 {
 public:
   /**
@@ -69,14 +70,17 @@ public:
 
 private:
   /**
-   * @brief Helper function to open the file and throw an error if it cannot be opened.
+   * @brief Helper function to open the file and throw an exception if it
+   *        cannot be opened.
    * @param path Path to the JSON file.
    * @return std::ifstream 
    */
   static std::ifstream Open(const std::string& path);
 };
 
-// Class to parse JSON data from a string.
+/**
+ * @brief Class to parse JSON data from a string.
+ */
 class JsonString : public JsonData
 {
 public:
@@ -135,7 +139,8 @@ protected:
   }
 
   /**
-   * @brief Retrieve an optional key from the JSON data.
+   * @brief Retrieve an optional key from the JSON data and provide a default
+   *        value if the key is not found.
    * @param key Key name to retrieve.
    * @param value Reference to store the retrieved value.
    * @param defaultValue Default value to use if the key is not found.
@@ -165,6 +170,81 @@ protected:
    */
   void Optional(const std::string& key, std::string& value, const char* defaultValue) const;
 
+  /**
+   * @brief Validate a value against a minimum. Throw if not validated.
+   *        Can only be used on types that support less-than comparison
+   * @param key The JSON key for error message
+   * @param value The value to validate
+   * @param min The minimum value
+   */
+  template<typename T,
+         typename = typename std::enable_if<
+           std::is_convertible<decltype(std::declval<T>() < std::declval<T>()), bool>::value
+         >::type>
+  void AboveMin(const std::string& key, const T& value, const T& min) const
+  {
+    if (value < min)
+    {
+      throw std::runtime_error("Value for key \"" + key + "\" is below minimum: " + std::to_string(min));
+    }
+  }
+
+  /**
+   * @brief Validate a value against a maximum. Throw if not validated.
+   *        Can only be used on types that support greater-than comparison
+   * @param key The JSON key for error message
+   * @param value The value to validate
+   * @param max The maximum value
+   */
+  template<typename T,
+         typename = typename std::enable_if<
+           std::is_convertible<decltype(std::declval<T>() > std::declval<T>()), bool>::value
+         >::type>
+  void BelowMax(const std::string& key, const T& value, const T& max) const
+  {
+    if (value > max)
+    {
+      throw std::runtime_error("Value for key \"" + key + "\" is above maximum: " + std::to_string(max));
+    }
+  }
+
+  /**
+   * @brief Validate a value against a min-max range. Throw if not validated.
+   *        Can only be used on types that support less/greater-than comparison
+   * @param key The JSON key for error message
+   * @param value The value to validate
+   * @param min The minimum value
+   * @param max The maximum value
+   */
+  template<typename T>
+  inline void WithinRange(const std::string& key, const T& value, const T& min, const T& max) const
+  {
+    Min(key, value, min);
+    Max(key, value, max);
+  }
+
+  /**
+   * @brief Validate a value against a set of permitted values. Throw if not
+   *        validated.
+   * @param key The JSON key for error message
+   * @param value The value to validate
+   * @param permitted The permitted values
+   */
+  template<typename T, std::size_t N>
+  inline void MemberOf(const std::string& key, const T& value, const std::initializer_list<T> permitted) const
+  {
+    for (const auto& p : permitted) {
+      if (value == p) return;
+    }
+
+    std::stringstream ss;
+    ss << "Value for key " << key << " must be one of:";
+    for (const auto& p : permitted) {
+      ss << " " << std::to_string(p);
+    }
+    throw std::runtime_error(ss.str());
+  }
+
 private:
   /**
    * @brief Parse the value of a key from the JSON data.
@@ -177,12 +257,12 @@ private:
     // Add types here as necessary
     if constexpr (std::is_same_v<T, std::string>) {
       if (!value.isString()) {
-        throw std::runtime_error("Expected string value for key: " + key);
+        throw std::runtime_error("Expected a string value for key: " + key);
       }
       return value.asString();
     } else if constexpr (std::is_same_v<T, int>) {
       if (!value.isInt()) {
-        throw std::runtime_error("Expected integer value for key: " + key);
+        throw std::runtime_error("Expected an integer value for key: " + key);
       }
       if (value.asInt() < Json::Value::minInt || value.asInt() > Json::Value::maxInt) {
         throw std::runtime_error("Integer value out of range for key: " + key);
@@ -190,25 +270,25 @@ private:
       return value.asInt();
     } else if constexpr (std::is_same_v<T, double>) {
       if (!value.isDouble()) {
-        throw std::runtime_error("Expected double value for key: " + key);
+        throw std::runtime_error("Expected a double value for key: " + key);
       }
       return value.asDouble();
     } else if constexpr (std::is_same_v<T, bool>) {
       if (!value.isBool()) {
-        throw std::runtime_error("Expected boolean value for key: " + key);
+        throw std::runtime_error("Expected a boolean value for key: " + key);
       }
       return value.asBool();
     } else if constexpr (std::is_base_of_v<ValidatedJson, T>) {
-      // Deal with nested json objects
+      // Deal with nested JSON objects
       if (!value.isObject()) {
-        throw std::runtime_error("Expected JSON object for key: " + key);
+        throw std::runtime_error("Expected a JSON object for key: " + key);
       }
       return T(JsonData(value));
     } else if constexpr (is_vector<T>::value) {
       std::cout << "vector" << std::endl;
       // Deal with JSON arrays
       if (!value.isArray()) {
-        throw std::runtime_error("Expected array for key: " + key);
+        throw std::runtime_error("Expected a JSON array for key: " + key);
       }
       T result;
       for (const auto& element : value) {
