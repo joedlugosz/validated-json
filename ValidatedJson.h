@@ -98,7 +98,7 @@ protected:
    */
   explicit ValidatedJson(const JsonData& data);
 
-  ValidatedJson() = delete;
+  ValidatedJson() = default;
   ValidatedJson(const ValidatedJson&) = default;
   ValidatedJson(ValidatedJson&&) = default;
   ValidatedJson& operator=(const ValidatedJson&) = default;
@@ -171,7 +171,10 @@ private:
       return _root[key].asDouble();
     } else if constexpr (std::is_same_v<T, bool>) {
       return _root[key].asBool();
-    } else {
+    } else if constexpr (std::is_base_of_v<ValidatedJson, T>) {
+      // Pass the nested JSON object into the constructor of the derived class
+      return T(JsonData(_root[key]));
+     } else {
       static_assert(false && sizeof(T), "Unsupported type for ParseValue()");
     }
   }

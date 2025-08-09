@@ -3,6 +3,28 @@
 
 #include "ValidatedJson.h"
 
+class MyData2 : public ValidatedJson
+{
+public:
+  MyData2(JsonData&& data) :
+    ValidatedJson(std::move(data))
+  {
+    Required("age", _age);
+  }
+
+  MyData2() {}
+
+  std::string ToString() const
+  {
+    std::stringstream ss;
+    ss << "MyData2: age = " << _age << std::endl;
+    return ss.str();
+  }
+  
+private:
+  int _age;
+};
+
 class MyData : public ValidatedJson
 {
 public:
@@ -11,18 +33,21 @@ public:
   {
     Optional("name", _name, "No name provided");
     Required("description", _description);
+    Required("nested", _nestedData);
   }
 
   std::string ToString() const
   {
     std::stringstream ss;
-    ss << "MyData: name = " << _name << ", description = " << _description << std::endl;
+    ss << "MyData: name = " << _name << ", description = "
+       << _description << ", nested = " << _nestedData.ToString() << std::endl;
     return ss.str();
   }
-  
+
 private:
   std::string _name;
   std::string _description;
+  MyData2 _nestedData;
 };
 
 #endif // MYDATA_H
