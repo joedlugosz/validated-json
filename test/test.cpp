@@ -41,10 +41,10 @@ TEST_CASE("ValidatedJson constructor throws if JSON is empty", "[json]") {
 TEST_CASE("ValidatedJson constructor throws if required JSON value is missing", "[presence]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testInt", testInt);    
-    }
+    TestValidatedJson(const JsonData& data) : 
+      ValidatedJson(data),
+      testInt(Required<int>("testInt"))
+    {}
   private:
     int testInt;
   };
@@ -59,10 +59,10 @@ TEST_CASE("ValidatedJson constructor throws if required JSON value is missing", 
 TEST_CASE("ValidatedJson constructor does not throw if required JSON value is present", "[presence]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testInt", testInt);    
-    }
+    TestValidatedJson(const JsonData& data) : 
+      ValidatedJson(data),
+      testInt(Required<int>("testInt"))
+    {}
   private:
     int testInt;
   };
@@ -76,10 +76,10 @@ TEST_CASE("ValidatedJson constructor does not throw if required JSON value is pr
 TEST_CASE("ValidatedJson constructor does not throw if optional JSON value is missing", "[presence]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Optional("testInt", testInt, 0);   
-    }
+    TestValidatedJson(const JsonData& data) : 
+      ValidatedJson(data),
+      testInt(Optional<int>("testInt", 0))
+    {}
   private:
     int testInt;
   };
@@ -93,10 +93,10 @@ TEST_CASE("ValidatedJson constructor does not throw if optional JSON value is mi
 TEST_CASE("ValidatedJson constructor does not throw if optional JSON value is present", "[presence]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Optional("testInt", testInt, 0);   
-    }
+    TestValidatedJson(const JsonData& data) : 
+      ValidatedJson(data),
+      testInt(Optional<int>("testInt", 0))
+    {}
   private:
     int testInt;
   };
@@ -112,10 +112,10 @@ TEST_CASE("ValidatedJson constructor does not throw if optional JSON value is pr
 TEST_CASE("Integer value is correctly parsed", "[parsing]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testInt", testInt);
-    }
+    TestValidatedJson(const JsonData& data) : 
+      ValidatedJson(data),
+      testInt(Required<int>("testInt"))
+    {}
     int testInt;
   };
   TestValidatedJson json{JsonString{"{\"testInt\": 10}"}};
@@ -125,10 +125,10 @@ TEST_CASE("Integer value is correctly parsed", "[parsing]") {
 TEST_CASE("String value is correctly parsed", "[parsing]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testString", testString);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testString(Required<std::string>("testString"))
+    {}
     std::string testString;
   };
   TestValidatedJson json{JsonString{"{\"testString\": \"Hello\"}"}};
@@ -138,10 +138,10 @@ TEST_CASE("String value is correctly parsed", "[parsing]") {
 TEST_CASE("Boolean value is correctly parsed", "[parsing]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testBool", testBool);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testBool(Required<bool>("testBool"))
+    {}
     bool testBool;
   };
   TestValidatedJson json{JsonString{"{\"testBool\": true}"}};
@@ -151,10 +151,10 @@ TEST_CASE("Boolean value is correctly parsed", "[parsing]") {
 TEST_CASE("Double value is correctly parsed", "[parsing]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testDouble", testDouble);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testDouble(Required<double>("testDouble"))
+    {}
     double testDouble;
   };
   TestValidatedJson json{JsonString{"{\"testDouble\": 3.14}"}};
@@ -164,20 +164,20 @@ TEST_CASE("Double value is correctly parsed", "[parsing]") {
 TEST_CASE("Nested JSON object is correctly parsed", "[parsing]") {
   class NestedData : public ValidatedJson {
   public:
-    NestedData() : ValidatedJson() {}
-    NestedData(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("age", age);
-    }
+    // NestedData() : ValidatedJson() {}
+    NestedData(const JsonData& data) :
+      ValidatedJson(data),
+      age(Required<int>("age"))
+    {}
     int age;
   };
 
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("nested", nested);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      nested(Required<NestedData>("nested"))
+    {}
     NestedData nested;
   };
 
@@ -188,10 +188,10 @@ TEST_CASE("Nested JSON object is correctly parsed", "[parsing]") {
 TEST_CASE("JSON array is correctly parsed", "[parsing]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("values", values);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      values(Required<std::vector<int>>("values"))
+    {}
     std::vector<int> values;
   };
 
@@ -205,10 +205,10 @@ TEST_CASE("JSON array is correctly parsed", "[parsing]") {
 TEST_CASE("ValidatedJson constructor throws if JSON value is not a string", "[parsing]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testString", testString);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testString(Required<std::string>("testString"))
+    {}
   private:
     std::string testString;
   };
@@ -223,10 +223,10 @@ TEST_CASE("ValidatedJson constructor throws if JSON value is not a string", "[pa
 TEST_CASE("ValidatedJson constructor throws if JSON value is not an integer", "[parsing]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testInt", testInt);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testInt(Required<int>("testInt"))
+    {}
   private:
     int testInt;
   };
@@ -241,10 +241,10 @@ TEST_CASE("ValidatedJson constructor throws if JSON value is not an integer", "[
 TEST_CASE("ValidatedJson constructor throws if JSON value is not a double", "[parsing]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testDouble", testDouble);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testDouble(Required<double>("testDouble"))
+    {}
   private:
     double testDouble;
   };
@@ -259,10 +259,10 @@ TEST_CASE("ValidatedJson constructor throws if JSON value is not a double", "[pa
 TEST_CASE("ValidatedJson constructor throws if JSON value is not a boolean", "[parsing]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testBool", testBool);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testBool(Required<bool>("testBool"))
+    {}
   private:
     bool testBool;
   };
@@ -277,16 +277,16 @@ TEST_CASE("ValidatedJson constructor throws if JSON value is not a boolean", "[p
 TEST_CASE("ValidatedJson constructor throws if JSON value is not an object", "[parsing]") {
   class NestedData : public ValidatedJson {
   public:
-    NestedData() : ValidatedJson() {}
+    // NestedData() : ValidatedJson() {}
     NestedData(const JsonData& data) : ValidatedJson(data) {}
   };
 
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("nested", nested);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      nested(Required<NestedData>("nested"))
+    {}
   private:
     NestedData nested;
   };
@@ -301,10 +301,10 @@ TEST_CASE("ValidatedJson constructor throws if JSON value is not an object", "[p
 TEST_CASE("ValidatedJson constructor throws if JSON value is not an array", "[parsing]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("values", values);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      values(Required<std::vector<int>>("values"))
+    {}
   private:
     std::vector<int> values;
   };
@@ -321,11 +321,10 @@ TEST_CASE("ValidatedJson constructor throws if JSON value is not an array", "[pa
 TEST_CASE("ValidatedJson constructor throws if int JSON value is below minimum", "[validation]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testInt", testInt);
-      AboveMin("testInt", testInt, 10);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testInt(Required<int>("testInt").AboveMin(10))
+    {}
   private:
     int testInt;
   };
@@ -340,11 +339,10 @@ TEST_CASE("ValidatedJson constructor throws if int JSON value is below minimum",
 TEST_CASE("ValidatedJson constructor does not throw if int JSON value is above minimum", "[validation]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testInt", testInt);
-      AboveMin("testInt", testInt, 10);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testInt(Required<int>("testInt").AboveMin(10))
+    {}
   private:
     int testInt;
   };
@@ -358,11 +356,10 @@ TEST_CASE("ValidatedJson constructor does not throw if int JSON value is above m
 TEST_CASE("ValidatedJson constructor throws if int JSON value is above maximum", "[validation]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testInt", testInt);
-      BelowMax("testInt", testInt, 10);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testInt(Required<int>("testInt").BelowMax(10))
+    {}
   private:
     int testInt;
   };
@@ -377,11 +374,10 @@ TEST_CASE("ValidatedJson constructor throws if int JSON value is above maximum",
 TEST_CASE("ValidatedJson constructor does not throw if int JSON value is below maximum", "[validation]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testInt", testInt);
-      BelowMax("testInt", testInt, 10);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testInt(Required<int>("testInt").BelowMax(10))
+    {}
   private:
     int testInt;
   };
@@ -395,11 +391,10 @@ TEST_CASE("ValidatedJson constructor does not throw if int JSON value is below m
 TEST_CASE("ValidatedJson constructor does not throw if int JSON value is within range", "[validation]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    { 
-      Required("testInt", testInt);
-      WithinRange("testInt", testInt, 10, 20);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testInt(Required<int>("testInt").WithinRange(10, 20))
+    {}
   private:
     int testInt;
   };
@@ -413,11 +408,10 @@ TEST_CASE("ValidatedJson constructor does not throw if int JSON value is within 
 TEST_CASE("ValidatedJson constructor throws if int JSON value is below range", "[validation]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testInt", testInt);
-      WithinRange("testInt", testInt, 10, 20);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testInt(Required<int>("testInt").WithinRange(10, 20))
+    {}
   private:
     int testInt;
   };
@@ -425,18 +419,17 @@ TEST_CASE("ValidatedJson constructor throws if int JSON value is below range", "
     TestValidatedJson json{JsonString{"{\"testInt\": 9}"}};
     FAIL("Expected exception not thrown");
   } catch (const std::runtime_error& e) {
-    REQUIRE(std::string(e.what()) == "Value for key \"testInt\" is below minimum: 10");
+    REQUIRE(std::string(e.what()) == "Value for key \"testInt\" is outside range 10 to 20");
   }
 }
 
 TEST_CASE("ValidatedJson constructor throws if int JSON value is above range", "[validation]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testInt", testInt);
-      WithinRange("testInt", testInt, 10, 20);
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testInt(Required<int>("testInt").WithinRange(10, 20))
+    {}
   private:
     int testInt;
   };
@@ -444,18 +437,17 @@ TEST_CASE("ValidatedJson constructor throws if int JSON value is above range", "
     TestValidatedJson json{JsonString{"{\"testInt\": 21}"}};
     FAIL("Expected exception not thrown");
   } catch (const std::runtime_error& e) {
-    REQUIRE(std::string(e.what()) == "Value for key \"testInt\" is above maximum: 20");
+    REQUIRE(std::string(e.what()) == "Value for key \"testInt\" is outside range 10 to 20");
   }
 }
 
 TEST_CASE("ValidatedJson constructor does not throw if value is in permitted list", "[validation]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testValue", testValue);
-      MemberOf("testValue", testValue, {1, 2, 3});
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testValue(Required<int>("testValue").MemberOf({1, 2, 3}))
+    {}
   private:
     int testValue;
   };
@@ -469,11 +461,10 @@ TEST_CASE("ValidatedJson constructor does not throw if value is in permitted lis
 TEST_CASE("ValidatedJson constructor throws if value is not in permitted list", "[validation]") {
   class TestValidatedJson : public ValidatedJson {
   public:
-    TestValidatedJson(const JsonData& data) : ValidatedJson(data)
-    {
-      Required("testValue", testValue);
-      MemberOf("testValue", testValue, {1, 2, 3});
-    }
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      testValue(Required<int>("testValue").MemberOf({1, 2, 3}))
+    {}
   private:
     int testValue;
   };

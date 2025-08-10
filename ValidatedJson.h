@@ -91,6 +91,105 @@ public:
   explicit JsonString(const std::string& string);
 };
 
+template<typename T>
+class ValidatedJsonField
+{
+public:
+  ValidatedJsonField(const std::string& key, T value) :
+    key(key), value(std::move(value))
+  {}
+  operator T() { return value;}
+  const std::string& key;
+  const T value;
+
+  /**
+   * @brief Validate a value against a minimum. Throw if not validated.
+   *        Can only be used on types that support less-than comparison
+   * @param key The JSON key for error message
+   * @param value The value to validate
+   * @param min The minimum value
+   */
+  template<typename U = T>
+    typename std::enable_if<
+    std::is_convertible<decltype(std::declval<U>() < std::declval<U>()), bool>::value,
+    ValidatedJsonField<T>
+    >::type 
+  AboveMin(const T& min) const
+  {
+    if (value < min)
+    {
+      throw std::runtime_error("Value for key \"" + key + "\" is below minimum: " + std::to_string(min));
+    }
+    return *this;
+  }
+
+  /**
+   * @brief Validate a value against a maximum. Throw if not validated.
+   *        Can only be used on types that support greater-than comparison
+   * @param key The JSON key for error message
+   * @param value The value to validate
+   * @param max The maximum value
+   */
+  template<typename U = T>
+    typename std::enable_if<
+    std::is_convertible<decltype(std::declval<U>() > std::declval<U>()), bool>::value,
+    ValidatedJsonField<T>
+    >::type 
+  BelowMax(const T& max) const
+  {
+    if (value > max)
+    {
+      throw std::runtime_error("Value for key \"" + key + "\" is above maximum: " + std::to_string(max));
+    }
+    return *this;
+  }
+
+  /**
+   * @brief Validate a value against a min-max range. Throw if not validated.
+   *        Can only be used on types that support less/greater-than comparison
+   * @param key The JSON key for error message
+   * @param value The value to validate
+   * @param min The minimum value
+   * @param max The maximum value
+   */
+  template<typename U = T>
+    typename std::enable_if<
+    std::is_convertible<decltype(std::declval<U>() > std::declval<U>()), bool>::value &&
+    std::is_convertible<decltype(std::declval<U>() < std::declval<U>()), bool>::value,
+    ValidatedJsonField<T>
+    >::type 
+  WithinRange(const T& min, const T& max) const
+  {
+    if (value < min || value > max)
+    {
+      throw std::runtime_error("Value for key \"" + key + "\" is outside range " + 
+        std::to_string(min) + " to " + std::to_string(max));
+    }
+    return *this;
+  }
+
+  /**
+   * @brief Validate a value against a set of permitted values. Throw if not
+   *        validated.
+   * @param key The JSON key for error message
+   * @param value The value to validate
+   * @param permitted The permitted values
+   */
+  ValidatedJsonField<T> MemberOf(const std::initializer_list<T> permitted) const
+  {
+    for (const auto& p : permitted) {
+      if (value == p) return *this;
+    }
+
+    std::stringstream ss;
+    ss << "Value for key " << key << " must be one of:";
+    for (const auto& p : permitted) {
+      ss << " " << std::to_string(p);
+    }
+    throw std::runtime_error(ss.str());
+  }
+};
+
 /**
  * @brief Class to perform validation on parsed JSON data.
  *        Derive from this class to implement specific validation logic.
@@ -113,7 +212,7 @@ protected:
    */
   explicit ValidatedJson(const JsonData& data);
 
-  ValidatedJson() = default;
+  ValidatedJson() = delete;
   ValidatedJson(const ValidatedJson&) = default;
   ValidatedJson(ValidatedJson&&) = default;
   ValidatedJson& operator=(const ValidatedJson&) = default;
@@ -128,14 +227,14 @@ protected:
    * @return None 
    */
   template<typename T>
-  void Required(const std::string& key, T& value) const
+  ValidatedJsonField<T> Required(const std::string& key) const
   {
     if (!_root.isMember(key))
     {
         throw std::runtime_error("Required key \"" + key + "\" not found");
     }
 
-    value = ParseValue<T>(key, _root[key]);
+    return ValidatedJsonField<T>(key, ParseValue<T>(key, _root[key]));
   }
 
   /**
@@ -147,15 +246,15 @@ protected:
    * @return None 
    */
   template<typename T>
-  void Optional(const std::string& key, T& value, const T& defaultValue) const
+  ValidatedJsonField<T> Optional(const std::string& key, const T& defaultValue) const
   {
     if (!_root.isMember(key))
     {
-      value = defaultValue;
+      return ValidatedJsonField<T>(key, defaultValue);
     }
     else
     {
-      value = ParseValue<T>(key, _root[key]);
+      return ValidatedJsonField<T>(key, ParseValue<T>(key, _root[key]));
     }
   }
 
@@ -168,82 +267,7 @@ protected:
    * @param defaultValue Default value to use if the key is not found.
    * @return None 
    */
-  void Optional(const std::string& key, std::string& value, const char* defaultValue) const;
-
-  /**
-   * @brief Validate a value against a minimum. Throw if not validated.
-   *        Can only be used on types that support less-than comparison
-   * @param key The JSON key for error message
-   * @param value The value to validate
-   * @param min The minimum value
-   */
-  template<typename T,
-         typename = typename std::enable_if<
-           std::is_convertible<decltype(std::declval<T>() < std::declval<T>()), bool>::value
-         >::type>
-  void AboveMin(const std::string& key, const T& value, const T& min) const
-  {
-    if (value < min)
-    {
-      throw std::runtime_error("Value for key \"" + key + "\" is below minimum: " + std::to_string(min));
-    }
-  }
-
-  /**
-   * @brief Validate a value against a maximum. Throw if not validated.
-   *        Can only be used on types that support greater-than comparison
-   * @param key The JSON key for error message
-   * @param value The value to validate
-   * @param max The maximum value
-   */
-  template<typename T,
-         typename = typename std::enable_if<
-           std::is_convertible<decltype(std::declval<T>() > std::declval<T>()), bool>::value
-         >::type>
-  void BelowMax(const std::string& key, const T& value, const T& max) const
-  {
-    if (value > max)
-    {
-      throw std::runtime_error("Value for key \"" + key + "\" is above maximum: " + std::to_string(max));
-    }
-  }
-
-  /**
-   * @brief Validate a value against a min-max range. Throw if not validated.
-   *        Can only be used on types that support less/greater-than comparison
-   * @param key The JSON key for error message
-   * @param value The value to validate
-   * @param min The minimum value
-   * @param max The maximum value
-   */
-  template<typename T>
-  inline void WithinRange(const std::string& key, const T& value, const T& min, const T& max) const
-  {
-    AboveMin(key, value, min);
-    BelowMax(key, value, max);
-  }
-
-  /**
-   * @brief Validate a value against a set of permitted values. Throw if not
-   *        validated.
-   * @param key The JSON key for error message
-   * @param value The value to validate
-   * @param permitted The permitted values
-   */
-  template<typename T>
-  inline void MemberOf(const std::string& key, const T& value, const std::initializer_list<T> permitted) const
-  {
-    for (const auto& p : permitted) {
-      if (value == p) return;
-    }
-
-    std::stringstream ss;
-    ss << "Value for key " << key << " must be one of:";
-    for (const auto& p : permitted) {
-      ss << " " << std::to_string(p);
-    }
-    throw std::runtime_error(ss.str());
-  }
+  ValidatedJsonField<std::string> Optional(const std::string& key, const char* defaultValue) const;
 
 private:
   /**

@@ -51,7 +51,7 @@ ValidatedJson::ValidatedJson(const JsonData& data) :
   _root(data.GetRoot())
 {}
 
-// Special case for default value supplied to strings
-void ValidatedJson::Optional(const std::string& key, std::string& value, const char* defaultValue) const {
-  Optional(key, value, std::string(defaultValue));
+ValidatedJsonField<std::string> ValidatedJson::Optional(const std::string& key, const char* defaultValue) const
+{
+  return Optional<std::string>(key, std::string(defaultValue));
 }

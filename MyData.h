@@ -7,12 +7,9 @@ class MyData2 : public ValidatedJson
 {
 public:
   MyData2(JsonData&& data) :
-    ValidatedJson(std::move(data))
-  {
-    Required("age", _age);
-  }
-
-  MyData2() {}
+    ValidatedJson(std::move(data)),
+    _age(Required<int>("age").BelowMax(18))
+  {}
 
   std::string ToString() const
   {
@@ -29,13 +26,12 @@ class MyData : public ValidatedJson
 {
 public:
   MyData(JsonData&& data) :
-    ValidatedJson(std::move(data))
-  {
-    Optional("name", _name, "No name provided");
-    Required("description", _description);
-    Required("nested", _nestedData);
-    Required("values", _values);
-  }
+    ValidatedJson(std::move(data)),
+    _name       (Optional<std::string>      ("name", "No name provided")),
+    _description(Required<std::string>      ("description")),
+    _nestedData (Required<MyData2>          ("nested")),
+    _values     (Required<std::vector<int>> ("values"))
+  {}
 
   std::string ToString() const
   {
