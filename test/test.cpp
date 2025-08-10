@@ -216,7 +216,7 @@ TEST_CASE("ValidatedJson constructor throws if JSON value is not a string", "[pa
     TestValidatedJson json{JsonString{"{\"testString\": 123}"}};
     FAIL("Expected exception not thrown");
   } catch (const std::runtime_error& e) {
-    REQUIRE(std::string(e.what()) == "Expected a string value for key: testString");
+    REQUIRE(std::string(e.what()) == "In JSON data, expected a string value for key \"testString\"");
   }
 }
 
@@ -234,7 +234,7 @@ TEST_CASE("ValidatedJson constructor throws if JSON value is not an integer", "[
     TestValidatedJson json{JsonString{"{\"testInt\": \"not an int\"}"}};
     FAIL("Expected exception not thrown");
   } catch (const std::runtime_error& e) {
-    REQUIRE(std::string(e.what()) == "Expected an integer value for key: testInt");
+    REQUIRE(std::string(e.what()) == "In JSON data, expected an integer value for key \"testInt\"");
   }
 }
 
@@ -252,7 +252,7 @@ TEST_CASE("ValidatedJson constructor throws if JSON value is not a double", "[pa
     TestValidatedJson json{JsonString{"{\"testDouble\": \"not a double\"}"}};
     FAIL("Expected exception not thrown");
   } catch (const std::runtime_error& e) {
-    REQUIRE(std::string(e.what()) == "Expected a double value for key: testDouble");
+    REQUIRE(std::string(e.what()) == "In JSON data, expected a double value for key \"testDouble\"");
   }
 }
 
@@ -270,7 +270,7 @@ TEST_CASE("ValidatedJson constructor throws if JSON value is not a boolean", "[p
     TestValidatedJson json{JsonString{"{\"testBool\": \"not a bool\"}"}};
     FAIL("Expected exception not thrown");
   } catch (const std::runtime_error& e) {
-    REQUIRE(std::string(e.what()) == "Expected a boolean value for key: testBool");
+    REQUIRE(std::string(e.what()) == "In JSON data, expected a boolean value for key \"testBool\"");
   }
 }
 
@@ -294,7 +294,7 @@ TEST_CASE("ValidatedJson constructor throws if JSON value is not an object", "[p
     TestValidatedJson json{JsonString{"{\"nested\": \"not an object\"}"}};
     FAIL("Expected exception not thrown");
   } catch (const std::runtime_error& e) {
-    REQUIRE(std::string(e.what()) == "Expected a JSON object for key: nested");
+    REQUIRE(std::string(e.what()) == "In JSON data, expected a JSON object for key \"nested\"");
   }
 }
 
@@ -312,7 +312,7 @@ TEST_CASE("ValidatedJson constructor throws if JSON value is not an array", "[pa
     TestValidatedJson json{JsonString{"{\"values\": \"not an array\"}"}};
     FAIL("Expected exception not thrown");
   } catch (const std::runtime_error& e) {
-    REQUIRE(std::string(e.what()) == "Expected a JSON array for key: values");
+    REQUIRE(std::string(e.what()) == "In JSON data, expected a JSON array for key \"values\"");
   }
 }
 
@@ -332,7 +332,7 @@ TEST_CASE("ValidatedJson constructor throws if int JSON value is below minimum",
     TestValidatedJson json{JsonString{"{\"testInt\": 9}"}};
     FAIL("Expected exception not thrown");
   } catch (const std::runtime_error& e) {
-    REQUIRE(std::string(e.what()) == "Value for key \"testInt\" is below minimum: 10");
+    REQUIRE(std::string(e.what()) == "In JSON data, value for key \"testInt\" is below minimum of 10");
   }
 }
 
@@ -367,7 +367,7 @@ TEST_CASE("ValidatedJson constructor throws if int JSON value is above maximum",
     TestValidatedJson json{JsonString{"{\"testInt\": 11}"}};
     FAIL("Expected exception not thrown");
   } catch (const std::runtime_error& e) {
-    REQUIRE(std::string(e.what()) == "Value for key \"testInt\" is above maximum: 10");
+    REQUIRE(std::string(e.what()) == "In JSON data, value for key \"testInt\" is above maximum of 10");
   }
 }
 
@@ -419,7 +419,7 @@ TEST_CASE("ValidatedJson constructor throws if int JSON value is below range", "
     TestValidatedJson json{JsonString{"{\"testInt\": 9}"}};
     FAIL("Expected exception not thrown");
   } catch (const std::runtime_error& e) {
-    REQUIRE(std::string(e.what()) == "Value for key \"testInt\" is outside range 10 to 20");
+    REQUIRE(std::string(e.what()) == "In JSON data, value for key \"testInt\" is outside range 10 to 20");
   }
 }
 
@@ -437,7 +437,7 @@ TEST_CASE("ValidatedJson constructor throws if int JSON value is above range", "
     TestValidatedJson json{JsonString{"{\"testInt\": 21}"}};
     FAIL("Expected exception not thrown");
   } catch (const std::runtime_error& e) {
-    REQUIRE(std::string(e.what()) == "Value for key \"testInt\" is outside range 10 to 20");
+    REQUIRE(std::string(e.what()) == "In JSON data, value for key \"testInt\" is outside range 10 to 20");
   }
 }
 
@@ -472,6 +472,6 @@ TEST_CASE("ValidatedJson constructor throws if value is not in permitted list", 
     TestValidatedJson json{JsonString{"{\"testValue\": 4}"}};
     FAIL("Expected exception not thrown");
   } catch (const std::runtime_error& e) {
-    REQUIRE(std::string(e.what()) == "Value for key testValue must be one of: 1 2 3");
+    REQUIRE(std::string(e.what()) == "In JSON data, value for key \"testValue\" must be one of: 1 2 3");
   }
 }

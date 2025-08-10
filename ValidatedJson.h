@@ -33,13 +33,13 @@ public:
    * @param stream Input stream containing JSON data.
    * @throws std::runtime_error if the stream is invalid or if parsing fails.
    */
-  explicit JsonData(std::istream&& stream);
+  explicit JsonData(std::istream&& stream, std::string source = "JSON data");
 
   /**
    * @brief Constructor that takes existing parsed JSON data.
    * @param root JSON root value.
    */
-  explicit JsonData(const Json::Value root);
+  explicit JsonData(const Json::Value root, std::string source = "JSON data");
 
   /**
    * @brief Get the Root value of the parsed JSON data.
@@ -47,11 +47,18 @@ public:
    */
   inline Json::Value GetRoot() const { return _root; }
 
+  /**
+   * @brief Get a string describing the source of the parsed JSON data.
+   * @return const std::string&
+   */
+  inline const std::string& GetSource() const { return _source; }
+
 protected:
   Json::Value _root;
 
 private:
   std::string _errors;
+  std::string _source;
 };
 
 /**
@@ -95,12 +102,16 @@ template<typename T>
 class ValidatedJsonField
 {
 public:
-  ValidatedJsonField(const std::string& key, T value) :
-    key(key), value(std::move(value))
+  ValidatedJsonField(const std::string& key, T value,
+    const std::string &source) :
+    _key(key), _value(std::move(value)), _source(source)
   {}
-  operator T() { return value;}
-  const std::string& key;
-  const T value;
+
+  /**
+   * @brief Type conversion operator to allow direct use of the value.
+   * @return The value of the field.
+   */
+  operator T() { return _value;}
 
   /**
    * @brief Validate a value against a minimum. Throw if not validated.
@@ -116,9 +127,9 @@ public:
     >::type 
   AboveMin(const T& min) const
   {
-    if (value < min)
+    if (_value < min)
     {
-      throw std::runtime_error("Value for key \"" + key + "\" is below minimum: " + std::to_string(min));
+      ThrowValidationError("is below minimum of " + std::to_string(min));
     }
     return *this;
   }
@@ -137,9 +148,9 @@ public:
     >::type 
   BelowMax(const T& max) const
   {
-    if (value > max)
+    if (_value > max)
     {
-      throw std::runtime_error("Value for key \"" + key + "\" is above maximum: " + std::to_string(max));
+      ThrowValidationError("is above maximum of " + std::to_string(max));
     }
     return *this;
   }
@@ -160,9 +171,9 @@ public:
     >::type 
   WithinRange(const T& min, const T& max) const
   {
-    if (value < min || value > max)
+    if (_value < min || _value > max)
     {
-      throw std::runtime_error("Value for key \"" + key + "\" is outside range " + 
+      ThrowValidationError("is outside range " + 
         std::to_string(min) + " to " + std::to_string(max));
     }
     return *this;
@@ -178,16 +189,27 @@ public:
   ValidatedJsonField<T> MemberOf(const std::initializer_list<T> permitted) const
   {
     for (const auto& p : permitted) {
-      if (value == p) return *this;
+      if (_value == p) return *this;
     }
 
     std::stringstream ss;
-    ss << "Value for key " << key << " must be one of:";
+    ss << "must be one of:";
     for (const auto& p : permitted) {
       ss << " " << std::to_string(p);
     }
-    throw std::runtime_error(ss.str());
+    ThrowValidationError(ss.str());
+    return *this; // For compilation, this line will never be reached.
   }
+
+private:
+  inline void ThrowValidationError(const std::string& message) const
+  {
+    throw std::runtime_error("In " + _source + ", value for key \"" + _key + "\" " + message);
+  }
+
+  const std::string& _key;
+  const T _value;
+  const std::string &_source;
 };
 
 /**
@@ -203,6 +225,12 @@ public:
    * @return Json::Value 
    */
   inline Json::Value GetRoot() const { return _root; }
+
+  /**
+   * @brief Get a string describing the source of the parsed JSON data.
+   * @return const std::string&
+   */
+  inline const std::string& GetSource() const { return _source; }
 
 protected:
   /**
@@ -234,7 +262,7 @@ protected:
         throw std::runtime_error("Required key \"" + key + "\" not found");
     }
 
-    return ValidatedJsonField<T>(key, ParseValue<T>(key, _root[key]));
+    return ValidatedJsonField<T>(key, ParseValue<T>(key, _root[key]), _source);
   }
 
   /**
@@ -250,11 +278,11 @@ protected:
   {
     if (!_root.isMember(key))
     {
-      return ValidatedJsonField<T>(key, defaultValue);
+      return ValidatedJsonField<T>(key, defaultValue, _source);
     }
     else
     {
-      return ValidatedJsonField<T>(key, ParseValue<T>(key, _root[key]));
+      return ValidatedJsonField<T>(key, ParseValue<T>(key, _root[key]), _source);
     }
   }
 
@@ -281,38 +309,35 @@ private:
     // Add types here as necessary
     if constexpr (std::is_same_v<T, std::string>) {
       if (!value.isString()) {
-        throw std::runtime_error("Expected a string value for key: " + key);
+        ThrowParsingError(key, "a string value");
       }
       return value.asString();
     } else if constexpr (std::is_same_v<T, int>) {
       if (!value.isInt()) {
-        throw std::runtime_error("Expected an integer value for key: " + key);
-      }
-      if (value.asInt() < Json::Value::minInt || value.asInt() > Json::Value::maxInt) {
-        throw std::runtime_error("Integer value out of range for key: " + key);
+        ThrowParsingError(key, "an integer value");
       }
       return value.asInt();
     } else if constexpr (std::is_same_v<T, double>) {
       if (!value.isDouble()) {
-        throw std::runtime_error("Expected a double value for key: " + key);
+        ThrowParsingError(key, "a double value");
       }
       return value.asDouble();
     } else if constexpr (std::is_same_v<T, bool>) {
       if (!value.isBool()) {
-        throw std::runtime_error("Expected a boolean value for key: " + key);
+        ThrowParsingError(key, "a boolean value");
       }
       return value.asBool();
     } else if constexpr (std::is_base_of_v<ValidatedJson, T>) {
       // Deal with nested JSON objects
       if (!value.isObject()) {
-        throw std::runtime_error("Expected a JSON object for key: " + key);
+        ThrowParsingError(key, "a JSON object");
       }
       return T(JsonData(value));
     } else if constexpr (is_vector<T>::value) {
       std::cout << "vector" << std::endl;
       // Deal with JSON arrays
       if (!value.isArray()) {
-        throw std::runtime_error("Expected a JSON array for key: " + key);
+        ThrowParsingError(key, "a JSON array");
       }
       T result;
       for (const auto& element : value) {
@@ -324,8 +349,14 @@ private:
     }
   }
 
+  inline void ThrowParsingError(const std::string &key, const std::string& description) const
+  {
+    throw std::runtime_error("In " + _source + ", expected " + description + " for key \"" + key + "\"");
+  }
+
 protected:
   Json::Value _root;
+  const std::string &_source;
 };
 
 #endif // VALIDATED_JSON_H

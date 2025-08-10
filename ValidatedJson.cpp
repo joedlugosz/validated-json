@@ -9,7 +9,8 @@
 
 #include "ValidatedJson.h"
 
-JsonData::JsonData(std::istream&& stream)
+JsonData::JsonData(std::istream&& stream, std::string source) : 
+  _source(source)
 {
   if (!stream.good())
   {
@@ -24,12 +25,13 @@ JsonData::JsonData(std::istream&& stream)
   }
 }
 
-JsonData::JsonData(const Json::Value root) :
+JsonData::JsonData(const Json::Value root, std::string source) : 
+  _source(source),
   _root(root)
 {}
 
 JsonFile::JsonFile(const std::string& path) :
-  JsonData(Open(path))
+  JsonData(Open(path), "JSON file \"" + path + "\"")
 {}
 
 std::ifstream JsonFile::Open(const std::string& path)
@@ -44,10 +46,11 @@ std::ifstream JsonFile::Open(const std::string& path)
 }
 
 JsonString::JsonString(const std::string& string) :
-  JsonData(std::stringstream(string))
+  JsonData(std::stringstream(string), "JSON data")
 {}
 
 ValidatedJson::ValidatedJson(const JsonData& data) :
+  _source(data.GetSource()),
   _root(data.GetRoot())
 {}
 
