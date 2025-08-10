@@ -9,6 +9,7 @@
 #include <iostream>
 #include <type_traits>
 #include <vector>
+#include <filesystem>
 
 /**
  * @brief Type trait to check if a type is a std::vector<T>.
@@ -116,8 +117,6 @@ public:
   /**
    * @brief Validate a value against a minimum. Throw if not validated.
    *        Can only be used on types that support less-than comparison
-   * @param key The JSON key for error message
-   * @param value The value to validate
    * @param min The minimum value
    */
   template<typename U = T>
@@ -137,7 +136,6 @@ public:
   /**
    * @brief Validate a value against a maximum. Throw if not validated.
    *        Can only be used on types that support greater-than comparison
-   * @param key The JSON key for error message
    * @param value The value to validate
    * @param max The maximum value
    */
@@ -158,8 +156,6 @@ public:
   /**
    * @brief Validate a value against a min-max range. Throw if not validated.
    *        Can only be used on types that support less/greater-than comparison
-   * @param key The JSON key for error message
-   * @param value The value to validate
    * @param min The minimum value
    * @param max The maximum value
    */
@@ -182,8 +178,6 @@ public:
   /**
    * @brief Validate a value against a set of permitted values. Throw if not
    *        validated.
-   * @param key The JSON key for error message
-   * @param value The value to validate
    * @param permitted The permitted values
    */
   ValidatedJsonField<T> MemberOf(const std::initializer_list<T> permitted) const
@@ -198,6 +192,22 @@ public:
       ss << " " << std::to_string(p);
     }
     ThrowValidationError(ss.str());
+    return *this; // For compilation, this line will never be reached.
+  }
+
+  /**
+   * @brief Validate a value as a filename. Throw if the file does not exist.
+   * @param prefix An optional path to prepend to the filename.
+   */
+  template<typename U = T>
+    typename std::enable_if<std::is_same<U, std::string>::value, ValidatedJsonField<T>>::type
+  File(const std::filesystem::path prefix = "") const
+  {
+    std::filesystem::path path = prefix / _value;
+    if (!std::filesystem::exists(path)) {
+      throw std::runtime_error("In " + _source + ", filename value for key \""
+        + _key + "\" does not exist: " + path.string());
+    }
     return *this; // For compilation, this line will never be reached.
   }
 

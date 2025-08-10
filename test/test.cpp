@@ -475,3 +475,38 @@ TEST_CASE("ValidatedJson constructor throws if value is not in permitted list", 
     REQUIRE(std::string(e.what()) == "In JSON data, value for key \"testValue\" must be one of: 1 2 3");
   }
 }
+
+TEST_CASE("ValidatedJson constructor does not throw if file value is found", "[validation]") {
+  class TestValidatedJson : public ValidatedJson {
+  public:
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      file(Required<std::string>("file").File())
+    {}
+  private:
+    std::string file;
+  };
+  try {
+    TestValidatedJson json{JsonString{"{\"file\": \"test.json\"}"}};
+  } catch (const std::runtime_error& e) {
+    FAIL("Exception was thrown");
+  }
+}
+
+TEST_CASE("ValidatedJson constructor throws if file value does not exist", "[validation]") {
+  class TestValidatedJson : public ValidatedJson {
+  public:
+    TestValidatedJson(const JsonData& data) :
+      ValidatedJson(data),
+      file(Required<std::string>("file").File())
+    {}
+  private:
+    std::string file;
+  };
+  try {
+    TestValidatedJson json{JsonString{"{\"file\": \"non_existent_file.txt\"}"}};
+    FAIL("Expected exception not thrown");
+  } catch (const std::runtime_error& e) {
+    REQUIRE(std::string(e.what()) == "In JSON data, filename value for key \"file\" does not exist: non_existent_file.txt");
+  }
+}
