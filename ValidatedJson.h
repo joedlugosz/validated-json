@@ -32,6 +32,7 @@ public:
   /**
    * @brief Constructor that reads JSON data from an input stream.
    * @param stream Input stream containing JSON data.
+   * @param source A string describing the source of the JSON data.
    * @throws std::runtime_error if the stream is invalid or if parsing fails.
    */
   explicit JsonData(std::istream&& stream, std::string source = "JSON data");
@@ -39,6 +40,7 @@ public:
   /**
    * @brief Constructor that takes existing parsed JSON data.
    * @param root JSON root value.
+   * @param source A string describing the source of the JSON data.
    */
   explicit JsonData(const Json::Value root, std::string source = "JSON data");
 
@@ -99,6 +101,12 @@ public:
   explicit JsonString(const std::string& string);
 };
 
+/**
+ * @brief Class providing validation methods on a parsed JSON field.
+ *        Functions return a ValidatedJsonField<T> object which can be used
+ *        to chain validation methods. Can be cast to the original type.
+ * @tparam T The type of the field being validated.
+ */
 template<typename T>
 class ValidatedJsonField
 {
