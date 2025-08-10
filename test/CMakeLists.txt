@@ -11,22 +11,20 @@ pkg_check_modules(JSONCPP REQUIRED jsoncpp)
 include(FetchContent)
 
 FetchContent_Declare(
-  Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG v3.5.2
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG v1.17.0
 )
-
-FetchContent_MakeAvailable(Catch2)
+FetchContent_MakeAvailable(googletest)
 
 add_executable(ValidatedJsonTest test.cpp ../ValidatedJson.cpp)
-target_link_libraries(ValidatedJsonTest PRIVATE Catch2::Catch2WithMain)
 
 target_include_directories(ValidatedJsonTest PRIVATE ${JSONCPP_INCLUDE_DIRS})
-target_link_libraries(ValidatedJsonTest PRIVATE ${JSONCPP_LIBRARIES})
+target_link_libraries(ValidatedJsonTest PRIVATE gtest gtest_main ${JSONCPP_LIBRARIES})
 target_compile_definitions(ValidatedJsonTest PRIVATE ${JSONCPP_CFLAGS_OTHER})
 
 include(CTest)
-include(Catch)
-catch_discover_tests(ValidatedJsonTest)
+include(GoogleTest)
+gtest_discover_tests(ValidatedJsonTest)
 
 configure_file(${CMAKE_SOURCE_DIR}/test.json ${CMAKE_BINARY_DIR}/test.json COPYONLY)
