@@ -132,7 +132,7 @@ public:
     std::is_convertible<decltype(std::declval<U>() < std::declval<U>()), bool>::value,
     ValidatedJsonField<T>
     >::type 
-  AboveMin(const T& min) const
+  Min(const T& min) const
   {
     if (_value < min)
     {
@@ -152,7 +152,7 @@ public:
     std::is_convertible<decltype(std::declval<U>() > std::declval<U>()), bool>::value,
     ValidatedJsonField<T>
     >::type 
-  BelowMax(const T& max) const
+  Max(const T& max) const
   {
     if (_value > max)
     {
@@ -173,7 +173,7 @@ public:
     std::is_convertible<decltype(std::declval<U>() < std::declval<U>()), bool>::value,
     ValidatedJsonField<T>
     >::type 
-  WithinRange(const T& min, const T& max) const
+  Range(const T& min, const T& max) const
   {
     if (_value < min || _value > max)
     {

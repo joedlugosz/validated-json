@@ -8,7 +8,7 @@ class MyData2 : public ValidatedJson
 public:
   MyData2(JsonData&& data) :
     ValidatedJson(std::move(data)),
-    _age(Required<int>("age").BelowMax(18))
+    _age(Required<int>("age").Max(18))
   {}
 
   std::string ToString() const
