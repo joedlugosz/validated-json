@@ -90,8 +90,8 @@ public:
     data(data)
   {
     Required("count", data.count).Min(1).Max(10);
-    RequiredCArray("test", data.test);
-    RequiredCArray<PersonValidator>("people", data.people);
+    Required("test", data.test);
+    Required<PersonValidator>("people", data.people);
   }
   PeopleStruct &data;
 };

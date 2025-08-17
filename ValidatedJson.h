@@ -282,23 +282,19 @@ protected:
   /**
    * @brief Retrieve a required key from the JSON data.
    * @param key Key name to retrieve.
-   * @param value Reference to store the retrieved value.
    * @throws std::runtime_error if the key is not found in the JSON data.
    * @return ValidatedJsonField<T>
    */
   template<typename T>
   ValidatedJsonField<T> Required(const std::string& key) const
   {
-    if (!_root.isMember(key))
-    {
-        throw std::runtime_error("Required key \"" + key + "\" not found");
-    }
-
+    CheckRequiredKey(key);
     return ValidatedJsonField<T>(key, ParseValue<T>(key, _root[key]), _source);
   }
 
   /**
-   * @brief Retrieve a required key from the JSON data.
+   * @brief Retrieve a required key from the JSON data and store in a supplied
+   *        variable.
    * @param key Key name to retrieve.
    * @param value Reference to store the retrieved value.
    * @throws std::runtime_error if the key is not found in the JSON data.
@@ -307,11 +303,7 @@ protected:
   template<typename T>
   ValidatedJsonField<T> Required(const std::string& key, T& value) const
   {
-    if (!_root.isMember(key))
-    {
-        throw std::runtime_error("Required key \"" + key + "\" not found");
-    }
-
+    CheckRequiredKey(key);
     return ValidatedJsonField<T>(key, ParseValue<T>(key, value, _root[key]), _source);
   }
 
@@ -325,11 +317,7 @@ protected:
    */
   ValidatedJsonField<char*> RequiredCString(const std::string& key, char* str, size_t length) const
   {
-    if (!_root.isMember(key))
-    {
-        throw std::runtime_error("Required key \"" + key + "\" not found");
-    }
-
+    CheckRequiredKey(key);
     return ValidatedJsonField<char *>(key, ParseValueCString(key, str, length, _root[key]), _source);
   }
 
@@ -350,11 +338,7 @@ protected:
   std::enable_if_t<std::is_integral<TElement>::value, ValidatedJsonField<TElement*>>
   Required(const std::string& key, TElement* array, size_t length) const
   {
-    if (!_root.isMember(key))
-    {
-        throw std::runtime_error("Required key \"" + key + "\" not found");
-    }
-
+    CheckRequiredKey(key);
     return ValidatedJsonField<TElement*>(key, ParseValue(key, array, length, _root[key]), _source);
   }
 
@@ -404,11 +388,7 @@ protected:
   ValidatedJsonField<TElement*>
   Required(const std::string& key, TElement* array, size_t length) const
   {
-    if (!_root.isMember(key))
-    {
-        throw std::runtime_error("Required key \"" + key + "\" not found");
-    }
-
+    CheckRequiredKey(key);
     return ValidatedJsonField<TElement*>(key, ParseValue<TValidator, TElement>(key, array, length, _root[key]), _source);
   }
 
@@ -482,46 +462,16 @@ private:
   template<typename T>
   T ParseValue(const std::string &key, const Json::Value& value) const
   {
-    // Add types here as necessary
-    if constexpr (std::is_same_v<T, std::string>) {
-      if (!value.isString()) {
-        ThrowParsingError(key, "a string value");
-      }
-      return value.asString();
-    } else if constexpr (std::is_same_v<T, int>) {
-      if (!value.isInt()) {
-        ThrowParsingError(key, "an integer value");
-      }
-      return value.asInt();
-    } else if constexpr (std::is_same_v<T, double>) {
-      if (!value.isDouble()) {
-        ThrowParsingError(key, "a double value");
-      }
-      return value.asDouble();
-    } else if constexpr (std::is_same_v<T, bool>) {
-      if (!value.isBool()) {
-        ThrowParsingError(key, "a boolean value");
-      }
-      return value.asBool();
-    } else if constexpr (std::is_base_of_v<ValidatedJson, T>) {
-      // Deal with nested JSON objects
+    if constexpr (std::is_base_of_v<ValidatedJson, T>) {
+      // Deal with nested JSON objects, avoiding default constructor
       if (!value.isObject()) {
         ThrowParsingError(key, "a JSON object");
       }
       return T(JsonData(value));
-    } else if constexpr (is_vector<T>::value) {
-      std::cout << "vector" << std::endl;
-      // Deal with JSON arrays
-      if (!value.isArray()) {
-        ThrowParsingError(key, "a JSON array");
-      }
-      T result;
-      for (const auto& element : value) {
-        result.emplace_back(ParseValue<typename T::value_type>(key, element));
-      }
-      return result;
     } else {
-      static_assert(false && sizeof(T), "Unsupported type for ParseValue()");
+      T ret;
+      ParseValue(key, ret, value);
+      return ret;
     }
   }
 
@@ -532,6 +482,7 @@ private:
    * @param value The JSON value to parse.
    * @throws std::runtime_error if the value is not of the expected type.
    * @return Parsed value of type T (same as `out`).
+   * @note Used for in-place parsing.
    */
   template<typename T>
   T ParseValue(const std::string &key, T& out, const Json::Value& value) const
@@ -569,11 +520,9 @@ private:
       if (!value.isArray()) {
         ThrowParsingError(key, "a JSON array");
       }
-      T result;
       for (const auto& element : value) {
-        result.emplace_back(ParseValue<typename T::value_type>(key, element));
+        out.emplace_back(ParseValue<typename T::value_type>(key, element));
       }
-      out = result;
     } else {
       static_assert(false && sizeof(T), "Unsupported type for ParseValue()");
     }
@@ -657,6 +606,13 @@ private:
     return array;
   }
 
+  void CheckRequiredKey(const std::string &key) const
+  {
+    if (!_root.isMember(key)) {
+      throw std::runtime_error("Required key \"" + key + "\" not found in JSON data from " + _source);
+    }
+  }
+
   /**
    * @brief Throw a parsing error with a specific key and description.
    * 
@@ -666,7 +622,7 @@ private:
    * @note This function is used internally to provide detailed error messages
    *       when parsing JSON data fails.
    */
-  inline void ThrowParsingError(const std::string &key, const std::string& description) const
+  void ThrowParsingError(const std::string &key, const std::string& description) const
   {
     throw std::runtime_error("In " + _source + ", expected " + description + " for key \"" + key + "\"");
   }
