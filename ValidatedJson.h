@@ -339,9 +339,8 @@ protected:
    * @throws std::runtime_error if the key is not found in the JSON data.
    * @return None 
    */
-  // Array of integral types which do not have a validator
   template<typename TElement>
-  std::enable_if_t<!has_value_type<TElement>::value, ValidatedJsonField<TElement*>>
+  std::enable_if_t<std::is_integral<TElement>::value, ValidatedJsonField<TElement*>>
   RequiredCArray(const std::string& key, TElement* array, size_t length) const
   {
     if (!_root.isMember(key))
@@ -352,23 +351,15 @@ protected:
     return ValidatedJsonField<TElement*>(key, ParseValueCArray(key, array, length, _root[key]), _source);
   }
 
-  // Array of integral types which do not have a validator
   template<typename TElement, std::size_t TLength>
-  std::enable_if_t<!has_value_type<TElement>::value, ValidatedJsonField<TElement*>>
+  std::enable_if_t<std::is_integral<TElement>::value, ValidatedJsonField<TElement*>>
   RequiredCArray(const std::string& key, TElement (&array)[TLength]) const
   {
     return RequiredCArray<TElement>(key, &array[0], TLength);
   }
 
-  // std::enable_if_t<
-  //     has_value_type<TElement>::value,
-  //     ValidatedJsonField<TElement*>
-  // >
-  // ValidatedJsonField<TElement*>
-  // std::enable_if_t<has_value_type<TElement>::value, ValidatedJsonField<TElement*>>
-
-  // Array of user defined types which have a validator
-  template<typename TValidator, typename TElement>
+  template<typename TValidator, typename TElement,
+    std::enable_if_t<std::is_aggregate<TElement>::value, int> = 0>
   ValidatedJsonField<TElement*>
   RequiredCArray(const std::string& key, TElement* array, size_t length) const
   {
@@ -380,49 +371,14 @@ protected:
     return ValidatedJsonField<TElement*>(key, ParseValueCArray<TValidator, TElement>(key, array, length, _root[key]), _source);
   }
 
-  template <typename TValidator, typename TElement, std::size_t TLength>
-  // std::enable_if_t<has_value_type<TElement>::value, ValidatedJsonField<TElement*>>
+  template <typename TValidator, typename TElement, std::size_t TLength,
+    std::enable_if_t<std::is_aggregate<TElement>::value, int> = 0>
   ValidatedJsonField<TElement*>
   RequiredCArray(const std::string& key, TElement (&array)[TLength]) const
   {
     return RequiredCArray<TValidator, TElement>(key, &array[0], TLength);
   }
 
-
-  /**
-   * @brief Retrieve a required key from the JSON data.
-   * @param key Key name to retrieve.
-   * @param value Reference to store the retrieved value.
-   * @throws std::runtime_error if the key is not found in the JSON data.
-   * @return None 
-   */
-  // template<typename TValidator, typename TElement>
-  // ValidatedJsonField<TElement*> RequiredCArray(const std::string& key, TElement* array, size_t length) const
-  // {
-  //   if (!_root.isMember(key))
-  //   {
-  //       throw std::runtime_error("Required key \"" + key + "\" not found");
-  //   }
-
-  //   return ValidatedJsonField<TElement*>(key, ParseValueCArray<TValidator, TElement>(key, array, length, _root[key]), _source);
-  // }
-
-  // template <template <typename> class TValidator, typename TElement, std::size_t TLength>
-  // ValidatedJsonField<TElement *> RequiredCArray(const std::string& key, TElement (&array)[TLength]) const
-  // {
-  //   if (!_root.isMember(key))
-  //   {
-  //       throw std::runtime_error("Required key \"" + key + "\" not found");
-  //   }
-
-  //   return ValidatedJsonField<TElement*>(key, ParseValueCArray<TValidator, TElement>(key, array, TLength, _root[key]), _source);
-  //   // return RequiredCArray<TValidator, TElement>(key, array, TLength);
-  // }
-
-  // template <typename TElement, std::size_t TLength, template <typename> class TValidator>
-  // ValidatedJsonField<TElement*> RequiredCArrayAuto(const std::string& key, TElement (&array)[TLength]) const {
-  //     return RequiredCArray<TValidator, TElement, TLength>(key, array);
-  // }
   /**
    * @brief Retrieve an optional key from the JSON data and provide a default
    *        value if the key is not found.
