@@ -65,6 +65,7 @@ struct PersonStruct
 struct PeopleStruct
 {
   PersonStruct people[10];
+  int test[3];
   int count;
 };
 
@@ -89,7 +90,8 @@ public:
     data(data)
   {
     Required("count", data.count).Min(1).Max(10);
-    RequiredCArray<PersonStruct, PersonValidator>("people", data.people, sizeof(data.people) / sizeof(data.people[0]));
+    RequiredCArray("test", data.test);
+    // RequiredCArray<PersonValidator, PersonStruct>("people", data.people, 10);
   }
   PeopleStruct &data;
 };

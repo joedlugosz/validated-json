@@ -24,6 +24,19 @@ template<typename T, typename Alloc>
 struct is_vector<std::vector<T, Alloc>> : std::true_type {};
 
 /**
+ * @brief Type trait to check if a type is user defined (has a value_type member).
+ */
+template<typename, typename = void>
+struct has_value_type : std::false_type {};
+
+/**
+ * @brief Type trait to check if a type is user defined (has a value_type member).
+ */
+template<typename T>
+struct has_value_type<T, std::void_t<typename T::value_type>> : std::true_type {};
+
+
+/**
  *  @brief Class to parse JSON data which is provided to a ValidatedJson class.
  *  @see   ValidatedJson, JsonFile, JsonString
  */
@@ -326,16 +339,40 @@ protected:
    * @throws std::runtime_error if the key is not found in the JSON data.
    * @return None 
    */
-  template<typename T>
-  ValidatedJsonField<T*> RequiredCArray(const std::string& key, T* array, size_t length) const
+  template<typename TElement>
+  ValidatedJsonField<TElement*> RequiredCArray(const std::string& key, TElement* array, size_t length) const
   {
     if (!_root.isMember(key))
     {
         throw std::runtime_error("Required key \"" + key + "\" not found");
     }
 
-    return ValidatedJsonField<T*>(key, ParseValueCArray(key, array, length, _root[key]), _source);
+    return ValidatedJsonField<TElement*>(key, ParseValueCArray(key, array, length, _root[key]), _source);
   }
+
+  template<typename TElement, std::size_t TLength>
+  ValidatedJsonField<TElement*> RequiredCArray(const std::string& key, TElement (&array)[TLength]) const
+  {
+    return RequiredCArray<TElement>(key, &array[0], TLength);
+  }
+
+  // template<typename TValidator, typename TElement>
+  // ValidatedJsonField<TElement*> RequiredCArray(const std::string& key, TElement* array, size_t length) const
+  // {
+  //   if (!_root.isMember(key))
+  //   {
+  //       throw std::runtime_error("Required key \"" + key + "\" not found");
+  //   }
+
+  //   return ValidatedJsonField<TElement*>(key, ParseValueCArray<TVal(key, array, length, _root[key]), _source);
+  // }
+
+  // template<typename TElement, std::size_t TLength>
+  // ValidatedJsonField<TElement*> RequiredCArray(const std::string& key, TElement (&array)[TLength]) const
+  // {
+  //   return RequiredCArray<TElement>(key, &array[0], TLength);
+  // }
+
 
   /**
    * @brief Retrieve a required key from the JSON data.
@@ -344,17 +381,33 @@ protected:
    * @throws std::runtime_error if the key is not found in the JSON data.
    * @return None 
    */
-  template<typename T, typename V>
-  ValidatedJsonField<T*> RequiredCArray(const std::string& key, T* array, size_t length) const
-  {
-    if (!_root.isMember(key))
-    {
-        throw std::runtime_error("Required key \"" + key + "\" not found");
-    }
+  // template<typename TValidator, typename TElement>
+  // ValidatedJsonField<TElement*> RequiredCArray(const std::string& key, TElement* array, size_t length) const
+  // {
+  //   if (!_root.isMember(key))
+  //   {
+  //       throw std::runtime_error("Required key \"" + key + "\" not found");
+  //   }
 
-    return ValidatedJsonField<T*>(key, ParseValueCArray<T, V>(key, array, length, _root[key]), _source);
-  }
+  //   return ValidatedJsonField<TElement*>(key, ParseValueCArray<TValidator, TElement>(key, array, length, _root[key]), _source);
+  // }
 
+  // template <template <typename> class TValidator, typename TElement, std::size_t TLength>
+  // ValidatedJsonField<TElement *> RequiredCArray(const std::string& key, TElement (&array)[TLength]) const
+  // {
+  //   if (!_root.isMember(key))
+  //   {
+  //       throw std::runtime_error("Required key \"" + key + "\" not found");
+  //   }
+
+  //   return ValidatedJsonField<TElement*>(key, ParseValueCArray<TValidator, TElement>(key, array, TLength, _root[key]), _source);
+  //   // return RequiredCArray<TValidator, TElement>(key, array, TLength);
+  // }
+
+  // template <typename TElement, std::size_t TLength, template <typename> class TValidator>
+  // ValidatedJsonField<TElement*> RequiredCArrayAuto(const std::string& key, TElement (&array)[TLength]) const {
+  //     return RequiredCArray<TValidator, TElement, TLength>(key, array);
+  // }
   /**
    * @brief Retrieve an optional key from the JSON data and provide a default
    *        value if the key is not found.
@@ -515,8 +568,8 @@ private:
    * @param key Key name to parse.
    * @return Parsed value of type T.
    */
-  template<typename T>
-  T *ParseValueCArray(const std::string &key, T* array, size_t length, const Json::Value& value) const
+  template <typename TElement>
+  TElement *ParseValueCArray(const std::string &key, TElement* array, size_t length, const Json::Value& value) const
   {
     if (!value.isArray()) {
       ThrowParsingError(key, "a JSON array");
@@ -525,7 +578,11 @@ private:
       ThrowParsingError(key, "a JSON array with size <= " + std::to_string(length));
     }
     for (size_t i = 0; i < value.size() && i < length; ++i) {
-      array[i] = ParseValue<typename T::value_type>(key, array[i], value.get(i, Json::Value()));
+      if constexpr (has_value_type<TElement>::value) {
+          ParseValue<typename TElement::value_type>(key, array[i], value.get(i, Json::Value()));
+      } else {
+          ParseValue<TElement>(key, array[i], value.get(i, Json::Value()));
+      }
     }
     return array;
   }
@@ -535,8 +592,8 @@ private:
    * @param key Key name to parse.
    * @return Parsed value of type T.
    */
-  template<typename T, typename V>
-  T *ParseValueCArray(const std::string &key, T* array, size_t length, const Json::Value& value) const
+  template <typename TElement, typename TValidator>
+  TElement *ParseValueCArray(const std::string &key, TElement* array, size_t length, const Json::Value& value) const
   {
     if (!value.isArray()) {
       ThrowParsingError(key, "a JSON array");
@@ -545,7 +602,7 @@ private:
       ThrowParsingError(key, "a JSON array with size <= " + std::to_string(length));
     }
     for (size_t i = 0; i < value.size() && i < length; ++i) {
-      V validator(JsonData{value.get(i, Json::Value())}, array[i]);
+      TValidator validator(JsonData{value.get(i, Json::Value())}, array[i]);
     }
     return array;
   }
