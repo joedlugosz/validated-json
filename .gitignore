@@ -1,1 +1,4 @@
 .vscode/**
+test/Testing
+test/build
+test/coverage*

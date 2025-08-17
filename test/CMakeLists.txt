@@ -17,6 +17,19 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
+option(CODE_COVERAGE "Enable coverage reporting" OFF)
+
+if(CODE_COVERAGE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        message(STATUS "Code coverage enabled")
+        add_compile_options(--coverage -O0 -g)
+        add_link_options(--coverage)
+    else()
+        message(FATAL_ERROR "Code coverage only supported with GCC/Clang")
+    endif()
+endif()
+enable_testing()
+
 add_executable(ValidatedJsonTest test.cpp ../ValidatedJson.cpp)
 
 target_include_directories(ValidatedJsonTest PRIVATE ${JSONCPP_INCLUDE_DIRS})
