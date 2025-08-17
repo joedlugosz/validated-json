@@ -133,8 +133,10 @@ public:
   /**
    * @brief Type conversion operator to allow direct use of the value.
    * @return The value of the field.
+   * @note Not available for array types, which can be parsed in-place
    */
-  operator T() { return _value;}
+  template<typename U = T, typename std::enable_if_t<!std::is_array<U>::value, int> = 0>
+  operator U() const { return _value; }
 
   /**
    * @brief Validate a value against a minimum. Throw if not validated.
@@ -335,7 +337,7 @@ protected:
    * @note Prefer the overload passing (key, array) to this.
    */
   template<typename TElement>
-  std::enable_if_t<std::is_integral<TElement>::value, ValidatedJsonField<TElement*>>
+  std::enable_if_t<std::is_scalar<TElement>::value, ValidatedJsonField<TElement*>>
   Required(const std::string& key, TElement* array, size_t length) const
   {
     CheckRequiredKey(key);
@@ -343,7 +345,7 @@ protected:
   }
 
   /**
-   * @brief Retrieve a required array of integral types from the JSON data and
+   * @brief Retrieve a required array of scalar types from the JSON data and
    *        parse all elements into a C-style array.
    * @tparam TElement The type of the elements in the C-style array.
    * @tparam TLength The length of the C-style array.
@@ -363,7 +365,7 @@ protected:
    * 
    */
   template<typename TElement, std::size_t TLength>
-  std::enable_if_t<std::is_integral<TElement>::value, ValidatedJsonField<TElement*>>
+  std::enable_if_t<std::is_scalar<TElement>::value, ValidatedJsonField<TElement*>>
   Required(const std::string& key, TElement (&array)[TLength]) const
   {
     return Required<TElement>(key, &array[0], TLength);
@@ -560,6 +562,7 @@ private:
    * @param length Length of the C-style array.
    * @param value The JSON array to parse.
    * @return Pointer to the first element of the array.
+   * @note Prefer the overload passing (key, array) to this.
    */
   template <typename TElement>
   TElement *ParseValue(const std::string &key, TElement* array, size_t length, const Json::Value& value) const
@@ -578,6 +581,22 @@ private:
       }
     }
     return array;
+  }
+
+  /**
+   * @brief Parse a JSON array of non-object values into a C-style array
+   *        in-place.
+   * @tparam TElement The type of the elements in the C-style array.
+   * @param key Key name being parsed (for error messages).
+   * @param array Reference to the C-style array.
+   * @param value The JSON array to parse.
+   * @return Pointer to the first element of the array.
+   * @note TElement and TLength can be deduced from the arguments
+   */
+  template <typename TElement, std::size_t N>
+  TElement *ParseValue(const std::string &key, TElement (&out)[N], const Json::Value& value) const
+  {
+    return ParseValue(key, out, N, value);
   }
 
   /**
@@ -606,10 +625,34 @@ private:
     return array;
   }
 
+  /**
+   * @brief Parse a JSON array of objects into a C-style array
+   *        in-place.
+   * @tparam TElement The type of the elements in the C-style array.
+   * @param key Key name being parsed (for error messages).
+   * @param out Reference to the C-style array.
+   * @param value The JSON array to parse.
+   * @return Pointer to the first element of the array.
+   * @note TElement and TLength can be deduced from the arguments
+   */
+  template <typename TValidator, typename TElement, std::size_t N>
+  TElement *ParseValue(const std::string &key, TElement (&out)[N], const Json::Value& value) const
+  {
+    return ParseValue<TValidator, TElement>(key, out, N, value);
+  }
+
+private:
+  /**
+   * @brief Check if a required key exists in the JSON data.
+   * @param key Key name to check.
+   * @throws std::runtime_error if the key is not found in the JSON data.
+   * @note This function is used internally to ensure that required keys are
+   *       present in the JSON data before attempting to access them.
+   */
   void CheckRequiredKey(const std::string &key) const
   {
     if (!_root.isMember(key)) {
-      throw std::runtime_error("Required key \"" + key + "\" not found in JSON data from " + _source);
+      throw std::runtime_error("Required key \"" + key + "\" not found in " + _source);
     }
   }
 
