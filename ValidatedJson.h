@@ -284,7 +284,7 @@ protected:
    * @param key Key name to retrieve.
    * @param value Reference to store the retrieved value.
    * @throws std::runtime_error if the key is not found in the JSON data.
-   * @return None 
+   * @return ValidatedJsonField<T>
    */
   template<typename T>
   ValidatedJsonField<T> Required(const std::string& key) const
@@ -302,7 +302,7 @@ protected:
    * @param key Key name to retrieve.
    * @param value Reference to store the retrieved value.
    * @throws std::runtime_error if the key is not found in the JSON data.
-   * @return None 
+   * @return ValidatedJsonField<T>
    */
   template<typename T>
   ValidatedJsonField<T> Required(const std::string& key, T& value) const
@@ -316,11 +316,12 @@ protected:
   }
 
   /**
-   * @brief Retrieve a required key from the JSON data.
+   * @brief Retrieve a required C-style string from the JSON data.
    * @param key Key name to retrieve.
-   * @param value Reference to store the retrieved value.
+   * @param str Pointer to a C-style string buffer to store the value.
+   * @param length Length of the C-style string buffer.
    * @throws std::runtime_error if the key is not found in the JSON data.
-   * @return None 
+   * @return ValidatedJsonField<char*> 
    */
   ValidatedJsonField<char*> RequiredCString(const std::string& key, char* str, size_t length) const
   {
@@ -333,50 +334,109 @@ protected:
   }
 
   /**
-   * @brief Retrieve a required key from the JSON data.
-   * @param key Key name to retrieve.
-   * @param value Reference to store the retrieved value.
+   * @brief Retrieve a required array of integral types from the JSON data and
+   *        parse all elements into a C-style array.
+   * @tparam TElement The type of the elements in the C-style array.
+   * @tparam TLength The length of the C-style array.
+   * @param key   Key name to retrieve.
+   * @param array Pointer to the first element of the C-style array to be
+   *              used for storage.
+   * @param length Length of the C-style array.
    * @throws std::runtime_error if the key is not found in the JSON data.
-   * @return None 
+   * @return ValidatedJsonField<TElement*> 
+   * @note Prefer the overload passing (key, array) to this.
    */
   template<typename TElement>
   std::enable_if_t<std::is_integral<TElement>::value, ValidatedJsonField<TElement*>>
-  RequiredCArray(const std::string& key, TElement* array, size_t length) const
+  Required(const std::string& key, TElement* array, size_t length) const
   {
     if (!_root.isMember(key))
     {
         throw std::runtime_error("Required key \"" + key + "\" not found");
     }
 
-    return ValidatedJsonField<TElement*>(key, ParseValueCArray(key, array, length, _root[key]), _source);
+    return ValidatedJsonField<TElement*>(key, ParseValue(key, array, length, _root[key]), _source);
   }
 
+  /**
+   * @brief Retrieve a required array of integral types from the JSON data and
+   *        parse all elements into a C-style array.
+   * @tparam TElement The type of the elements in the C-style array.
+   * @tparam TLength The length of the C-style array.
+   * @param key   Key name to retrieve.
+   * @param array Pointer to the first element of the C-style array to be
+   *              used for storage.
+   * @param length Length of the C-style array.
+   * @throws std::runtime_error if the key is not found in the JSON data.
+   * @return ValidatedJsonField<TElement*> 
+   * @note TElement and TLength can be deduced from the arguments
+   * 
+   * Example usage:
+   * @code {.language-id}
+   *  int intArray[10];
+   *  Required("ints", intArray);
+   * @endcode
+   * 
+   */
   template<typename TElement, std::size_t TLength>
   std::enable_if_t<std::is_integral<TElement>::value, ValidatedJsonField<TElement*>>
-  RequiredCArray(const std::string& key, TElement (&array)[TLength]) const
+  Required(const std::string& key, TElement (&array)[TLength]) const
   {
-    return RequiredCArray<TElement>(key, &array[0], TLength);
+    return Required<TElement>(key, &array[0], TLength);
   }
 
+  /**
+   * @brief Retrieve an array of aggregate objects from the JSON data and
+   *        parse all elements into a C-style array.
+   * @tparam TValidator The validator class to use for parsing each object.
+   * @tparam TElement The type of the elements in the C-style array.
+   * @tparam TLength The length of the C-style array.
+   * @param key   Key name to retrieve.
+   * @param array Pointer to the first element of the C-style array to be
+   *              used for storage.
+   * @param length Length of the C-style array.
+   * @throws std::runtime_error if the key is not found in the JSON data.
+   * @return ValidatedJsonField<TElement*> 
+   * @note Prefer the overload passing (key, array) to this.
+   */
   template<typename TValidator, typename TElement,
     std::enable_if_t<std::is_aggregate<TElement>::value, int> = 0>
   ValidatedJsonField<TElement*>
-  RequiredCArray(const std::string& key, TElement* array, size_t length) const
+  Required(const std::string& key, TElement* array, size_t length) const
   {
     if (!_root.isMember(key))
     {
         throw std::runtime_error("Required key \"" + key + "\" not found");
     }
 
-    return ValidatedJsonField<TElement*>(key, ParseValueCArray<TValidator, TElement>(key, array, length, _root[key]), _source);
+    return ValidatedJsonField<TElement*>(key, ParseValue<TValidator, TElement>(key, array, length, _root[key]), _source);
   }
 
+  /**
+   * @brief Retrieve an array of aggregate objects from the JSON data and
+   *        parse all elements into a C-style array.
+   * @tparam TValidator The validator class to use for parsing each object.
+   * @tparam TElement The type of the elements in the C-style array.
+   * @tparam TLength The length of the C-style array.
+   * @param key Key name to retrieve.
+   * @param array Reference to the C-style array to be used for storage.
+   * @throws std::runtime_error if the key is not found in the JSON data.
+   * @return ValidatedJsonField<TElement*> 
+   * @note TElement and TLength can be deduced from the arguments
+   * 
+   * Example usage:
+   * @code {.language-id}
+   *  struct Person peopleArray[10];
+   *  Required<PersonValidator>("people", peopleArray);
+   * @endcode
+   * 
+   */
   template <typename TValidator, typename TElement, std::size_t TLength,
     std::enable_if_t<std::is_aggregate<TElement>::value, int> = 0>
   ValidatedJsonField<TElement*>
-  RequiredCArray(const std::string& key, TElement (&array)[TLength]) const
+  Required(const std::string& key, TElement (&array)[TLength]) const
   {
-    return RequiredCArray<TValidator, TElement>(key, &array[0], TLength);
+    return Required<TValidator, TElement>(key, &array[0], TLength);
   }
 
   /**
@@ -415,6 +475,8 @@ private:
   /**
    * @brief Parse the value of a key from the JSON data.
    * @param key Key name to parse.
+   * @param value The JSON value to parse.
+   * @throws std::runtime_error if the value is not of the expected type.
    * @return Parsed value of type T.
    */
   template<typename T>
@@ -464,9 +526,12 @@ private:
   }
 
   /**
-   * @brief Parse the value of a key from the JSON data.
+   * @brief Parse the value of a key from the JSON data and return in `out`.
    * @param key Key name to parse.
-   * @return Parsed value of type T.
+   * @param out Reference to store the parsed value.
+   * @param value The JSON value to parse.
+   * @throws std::runtime_error if the value is not of the expected type.
+   * @return Parsed value of type T (same as `out`).
    */
   template<typename T>
   T ParseValue(const std::string &key, T& out, const Json::Value& value) const
@@ -516,9 +581,12 @@ private:
   }
 
   /**
-   * @brief Parse the value of a key from the JSON data.
-   * @param key Key name to parse.
-   * @return Parsed value of type T.
+   * @brief Parse a JSON string into a C-string.
+   * @param key Key name being parsed (for error messages).
+   * @param out Pointer to the start of the C-string.
+   * @param length Allocated length on the C-string including null termination.
+   * @param value The JSON string to parse.
+   * @return Pointer to the start of the C-string.
    */
   char *ParseValueCString(const std::string &key, char *out, size_t length, const Json::Value& value) const
   {
@@ -535,12 +603,17 @@ private:
   }
 
   /**
-   * @brief Parse the value of a key from the JSON data.
-   * @param key Key name to parse.
-   * @return Parsed value of type T.
+   * @brief Parse a JSON array of non-object values into a C-style array
+   *        in-place.
+   * @tparam TElement The type of the elements in the C-style array.
+   * @param key Key name being parsed (for error messages).
+   * @param array Pointer to the C-style array.
+   * @param length Length of the C-style array.
+   * @param value The JSON array to parse.
+   * @return Pointer to the first element of the array.
    */
   template <typename TElement>
-  TElement *ParseValueCArray(const std::string &key, TElement* array, size_t length, const Json::Value& value) const
+  TElement *ParseValue(const std::string &key, TElement* array, size_t length, const Json::Value& value) const
   {
     if (!value.isArray()) {
       ThrowParsingError(key, "a JSON array");
@@ -550,21 +623,27 @@ private:
     }
     for (size_t i = 0; i < value.size() && i < length; ++i) {
       if constexpr (has_value_type<TElement>::value) {
-          ParseValue<typename TElement::value_type>(key, array[i], value.get(i, Json::Value()));
+        ParseValue<typename TElement::value_type>(key, array[i], value.get(i, Json::Value()));
       } else {
-          ParseValue<TElement>(key, array[i], value.get(i, Json::Value()));
+        ParseValue<TElement>(key, array[i], value.get(i, Json::Value()));
       }
     }
     return array;
   }
 
   /**
-   * @brief Parse the value of a key from the JSON data.
-   * @param key Key name to parse.
-   * @return Parsed value of type T.
+   * @brief Parse a JSON array of objects into a C-style array in-place, using
+   *        a validator class to parse and validate each object.
+   * @tparam TValidator The validator class to use for parsing each object.
+   * @tparam TElement The type of the elements in the C-style array.
+   * @param key Key name being parsed (for error messages).
+   * @param array Pointer to the C-style array.
+   * @param length Length of the C-style array.
+   * @param value The JSON array to parse.
+   * @return Pointer to the first element of the array.
    */
   template <typename TValidator, typename TElement>
-  TElement *ParseValueCArray(const std::string &key, TElement* array, size_t length, const Json::Value& value) const
+  TElement *ParseValue(const std::string &key, TElement* array, size_t length, const Json::Value& value) const
   {
     if (!value.isArray()) {
       ThrowParsingError(key, "a JSON array");
@@ -578,6 +657,15 @@ private:
     return array;
   }
 
+  /**
+   * @brief Throw a parsing error with a specific key and description.
+   * 
+   * @param key The key that caused the error.
+   * @param description A description of the expected type or value.
+   * @throws std::runtime_error with a detailed error message.
+   * @note This function is used internally to provide detailed error messages
+   *       when parsing JSON data fails.
+   */
   inline void ThrowParsingError(const std::string &key, const std::string& description) const
   {
     throw std::runtime_error("In " + _source + ", expected " + description + " for key \"" + key + "\"");
