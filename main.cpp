@@ -39,12 +39,26 @@ int main(int argc, char* argv[])
   //   return 1;
   // }
 
+  // try {
+  //   auto data{MyData{JsonString("{\"description\": \"a test\", \"nested\": {\"age\": 30}"
+  //     ", \"values\": [1, 2, 3]}")}};
+  //   std::cout << data.ToString() << std::endl;
+  //   std::cout << "JSON string loaded successfully." << std::endl;
+  // } catch (const std::exception& e) { 
+  //   std::cerr << "Error: " << e.what() << std::endl;
+  //   return 1;
+  // }
+
   try {
-    auto data{MyData{JsonString("{\"description\": \"a test\", \"nested\": {\"age\": 30}"
-      ", \"values\": [1, 2, 3]}")}};
-    std::cout << data.ToString() << std::endl;
-    std::cout << "JSON string loaded successfully." << std::endl;
-  } catch (const std::exception& e) { 
+    PeopleStruct peopleData;
+    PeopleValidator data{JsonFile(argv[1]), peopleData};
+    std::cout << "People count: " << peopleData.count << std::endl;
+    for (int i = 0; i < peopleData.count; ++i) {
+      std::cout << "Person " << i << ": Age = " << peopleData.people[i].age
+                << ", Name = " << peopleData.people[i].name << std::endl;
+    }
+    std::cout << "JSON file loaded successfully." << std::endl;
+  } catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << std::endl;
     return 1;
   }

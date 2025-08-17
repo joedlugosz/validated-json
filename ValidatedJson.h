@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <vector>
 #include <filesystem>
+#include <cstring>
 
 /**
  * @brief Type trait to check if a type is a std::vector<T>.
@@ -284,6 +285,77 @@ protected:
   }
 
   /**
+   * @brief Retrieve a required key from the JSON data.
+   * @param key Key name to retrieve.
+   * @param value Reference to store the retrieved value.
+   * @throws std::runtime_error if the key is not found in the JSON data.
+   * @return None 
+   */
+  template<typename T>
+  ValidatedJsonField<T> Required(const std::string& key, T& value) const
+  {
+    if (!_root.isMember(key))
+    {
+        throw std::runtime_error("Required key \"" + key + "\" not found");
+    }
+
+    return ValidatedJsonField<T>(key, ParseValue<T>(key, value, _root[key]), _source);
+  }
+
+  /**
+   * @brief Retrieve a required key from the JSON data.
+   * @param key Key name to retrieve.
+   * @param value Reference to store the retrieved value.
+   * @throws std::runtime_error if the key is not found in the JSON data.
+   * @return None 
+   */
+  ValidatedJsonField<char*> RequiredCString(const std::string& key, char* str, size_t length) const
+  {
+    if (!_root.isMember(key))
+    {
+        throw std::runtime_error("Required key \"" + key + "\" not found");
+    }
+
+    return ValidatedJsonField<char *>(key, ParseValueCString(key, str, length, _root[key]), _source);
+  }
+
+  /**
+   * @brief Retrieve a required key from the JSON data.
+   * @param key Key name to retrieve.
+   * @param value Reference to store the retrieved value.
+   * @throws std::runtime_error if the key is not found in the JSON data.
+   * @return None 
+   */
+  template<typename T>
+  ValidatedJsonField<T*> RequiredCArray(const std::string& key, T* array, size_t length) const
+  {
+    if (!_root.isMember(key))
+    {
+        throw std::runtime_error("Required key \"" + key + "\" not found");
+    }
+
+    return ValidatedJsonField<T*>(key, ParseValueCArray(key, array, length, _root[key]), _source);
+  }
+
+  /**
+   * @brief Retrieve a required key from the JSON data.
+   * @param key Key name to retrieve.
+   * @param value Reference to store the retrieved value.
+   * @throws std::runtime_error if the key is not found in the JSON data.
+   * @return None 
+   */
+  template<typename T, typename V>
+  ValidatedJsonField<T*> RequiredCArray(const std::string& key, T* array, size_t length) const
+  {
+    if (!_root.isMember(key))
+    {
+        throw std::runtime_error("Required key \"" + key + "\" not found");
+    }
+
+    return ValidatedJsonField<T*>(key, ParseValueCArray<T, V>(key, array, length, _root[key]), _source);
+  }
+
+  /**
    * @brief Retrieve an optional key from the JSON data and provide a default
    *        value if the key is not found.
    * @param key Key name to retrieve.
@@ -365,6 +437,117 @@ private:
     } else {
       static_assert(false && sizeof(T), "Unsupported type for ParseValue()");
     }
+  }
+
+  /**
+   * @brief Parse the value of a key from the JSON data.
+   * @param key Key name to parse.
+   * @return Parsed value of type T.
+   */
+  template<typename T>
+  T ParseValue(const std::string &key, T& out, const Json::Value& value) const
+  {
+    // Add types here as necessary
+    if constexpr (std::is_same_v<T, std::string>) {
+      if (!value.isString()) {
+        ThrowParsingError(key, "a string value");
+      }
+      out = value.asString();
+    } else if constexpr (std::is_same_v<T, int>) {
+      if (!value.isInt()) {
+        ThrowParsingError(key, "an integer value");
+      }
+      out =  value.asInt();
+    } else if constexpr (std::is_same_v<T, double>) {
+      if (!value.isDouble()) {
+        ThrowParsingError(key, "a double value");
+      }
+      out = value.asDouble();
+    } else if constexpr (std::is_same_v<T, bool>) {
+      if (!value.isBool()) {
+        ThrowParsingError(key, "a boolean value");
+      }
+      out = value.asBool();
+    } else if constexpr (std::is_base_of_v<ValidatedJson, T>) {
+      // Deal with nested JSON objects
+      if (!value.isObject()) {
+        ThrowParsingError(key, "a JSON object");
+      }
+      out = T(JsonData(value));
+    } else if constexpr (is_vector<T>::value) {
+      std::cout << "vector" << std::endl;
+      // Deal with JSON arrays
+      if (!value.isArray()) {
+        ThrowParsingError(key, "a JSON array");
+      }
+      T result;
+      for (const auto& element : value) {
+        result.emplace_back(ParseValue<typename T::value_type>(key, element));
+      }
+      out = result;
+    } else {
+      static_assert(false && sizeof(T), "Unsupported type for ParseValue()");
+    }
+    return out;
+  }
+
+  /**
+   * @brief Parse the value of a key from the JSON data.
+   * @param key Key name to parse.
+   * @return Parsed value of type T.
+   */
+  char *ParseValueCString(const std::string &key, char *out, size_t length, const Json::Value& value) const
+  {
+    if (!value.isString()) {
+      ThrowParsingError(key, "a string value");
+    }
+    auto str = value.asString();
+    if (str.length() >= length - 1) {
+      ThrowParsingError(key, "a string value with length < " + std::to_string(length - 1));
+    }
+    std::strncpy(out, str.c_str(), length - 1);
+    out[length - 1] = '\0'; // Ensure null-termination
+    return out;
+  }
+
+  /**
+   * @brief Parse the value of a key from the JSON data.
+   * @param key Key name to parse.
+   * @return Parsed value of type T.
+   */
+  template<typename T>
+  T *ParseValueCArray(const std::string &key, T* array, size_t length, const Json::Value& value) const
+  {
+    if (!value.isArray()) {
+      ThrowParsingError(key, "a JSON array");
+    }
+    if (value.size() > length) {
+      ThrowParsingError(key, "a JSON array with size <= " + std::to_string(length));
+    }
+    for (size_t i = 0; i < value.size() && i < length; ++i) {
+      array[i] = ParseValue<typename T::value_type>(key, array[i], value.get(i, Json::Value()));
+    }
+    return array;
+  }
+
+  /**
+   * @brief Parse the value of a key from the JSON data.
+   * @param key Key name to parse.
+   * @return Parsed value of type T.
+   */
+  template<typename T, typename V>
+  T *ParseValueCArray(const std::string &key, T* array, size_t length, const Json::Value& value) const
+  {
+    if (!value.isArray()) {
+      ThrowParsingError(key, "a JSON array");
+    }
+    if (value.size() > length) {
+      ThrowParsingError(key, "a JSON array with size <= " + std::to_string(length));
+    }
+    for (size_t i = 0; i < value.size() && i < length; ++i) {
+      V validator(JsonData{value.get(i, Json::Value())}, array[i]);
+    }
+    return array;
   }
 
   inline void ThrowParsingError(const std::string &key, const std::string& description) const

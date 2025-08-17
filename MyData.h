@@ -55,4 +55,43 @@ private:
   MyData2 _nestedData;
 };
 
+
+struct PersonStruct
+{
+  int age;
+  char name[20];
+};
+
+struct PeopleStruct
+{
+  PersonStruct people[10];
+  int count;
+};
+
+class PersonValidator : public ValidatedJson
+{
+public:
+  PersonValidator(JsonData&& json, PersonStruct &data) :
+    ValidatedJson(std::move(json)),
+    data(data)
+  {
+    Required("age", data.age).Min(0).Max(120);
+    RequiredCString("name", data.name, sizeof(data.name));
+  }
+  PersonStruct &data;
+};
+
+class PeopleValidator : public ValidatedJson
+{
+public:
+  PeopleValidator(JsonData&& json, PeopleStruct &data) :
+    ValidatedJson(std::move(json)),
+    data(data)
+  {
+    Required("count", data.count).Min(1).Max(10);
+    RequiredCArray<PersonStruct, PersonValidator>("people", data.people, sizeof(data.people) / sizeof(data.people[0]));
+  }
+  PeopleStruct &data;
+};
+
 #endif // MYDATA_H

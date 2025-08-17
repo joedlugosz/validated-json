@@ -1,0 +1,30 @@
+{
+  "count": 5,
+  "people": [
+    {
+      "name": "Alice",
+      "age": 30,
+      "city": "New York"
+    },
+    {
+      "name": "Bob",
+      "age": 25,
+      "city": "Los Angeles"
+    },
+    {
+      "name": "Charlie",
+      "age": 35,
+      "city": "Chicago"
+    },
+    {
+      "name": "Diana",
+      "age": 28,
+      "city": "Miami"
+    },
+    {
+      "name": "Ethan",
+      "age": 22,
+      "city": "Seattle"
+    }
+  ]
+}
